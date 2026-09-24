@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # NeuroFace: AI-Powered Facial Recognition-Based Student Attendance Management System Using Deep Learning
 
 **NeuroFace** is an enterprise-grade, full-stack academic attendance automation platform developed for MCA final-year project demonstration and research presentation. It eliminates proxy attendance and manual roll calls by combining **MTCNN multi-face detection & canonical alignment**, **512-dimensional ArcFace deep facial embeddings**, **temporal multi-frame confirmation**, and **automated OCR leave certificate analysis** with role-based governance.
@@ -138,3 +139,7 @@ cd d:\NeuroFace\backend
 ```
 All 7 test suites pass with 100% compliance.
 
+=======
+# NeuroFace
+AI-powered student attendance system using facial recognition, deep learning, OCR, and automated attendance management.
+>>>>>>> 2003bb53a76ea180cdba3bb290f4fb329bc52d01
