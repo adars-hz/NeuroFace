@@ -1,0 +1,14 @@
+{
+  "name": "neuroface-backend",
+  "version": "1.0.0",
+  "description": "NeuroFace FastAPI Deep Learning Backend",
+  "private": true,
+  "scripts": {
+    "dev": "venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "backend": "venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload",
+    "start": "venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000",
+    "test": "venv\\Scripts\\python.exe test_core.py",
+    "seed": "venv\\Scripts\\python.exe seed_data.py",
+    "db": "venv\\Scripts\\python.exe view_db.py"
+  }
+}
