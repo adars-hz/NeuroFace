@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { GraduationCap, Plus, CheckCircle, XCircle, Mail, Hash, X, Edit2, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { GraduationCap, Plus, CheckCircle, XCircle, Mail, Hash, X, Edit2, Trash2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
 
 const StudentsPage = () => {
+  const { user } = useAuth();
+  const isHod = user?.is_hod && user?.role !== 'ADMIN';
   const [students, setStudents] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -89,11 +92,15 @@ const StudentsPage = () => {
       if (editFormData.password.trim()) {
         payload.password = editFormData.password.trim();
       }
-      await api.put(`/admin/students/${editStudent.id}`, payload);
+      const res = await api.put(`/admin/students/${editStudent.id}`, payload);
       setEditStudent(null);
-      setMsg(`Student '${editFormData.full_name}' updated successfully.`);
+      if (res.data?.status === 'PENDING_APPROVAL') {
+        setMsg(res.data.message || 'Update request submitted for Admin approval.');
+      } else {
+        setMsg(`Student '${editFormData.full_name}' updated successfully.`);
+      }
       loadData();
-      setTimeout(() => setMsg(''), 3000);
+      setTimeout(() => setMsg(''), 4000);
     } catch (err) {
       alert('Error updating student: ' + (err.response?.data?.detail || err.message));
     } finally {
@@ -122,11 +129,15 @@ const StudentsPage = () => {
     if (!deleteTarget) return;
     setActionLoading(true);
     try {
-      await api.delete(`/admin/students/${deleteTarget.id}`);
+      const res = await api.delete(`/admin/students/${deleteTarget.id}`);
       setDeleteTarget(null);
-      setMsg(`Student '${deleteTarget.full_name}' deleted successfully.`);
+      if (res.data?.status === 'PENDING_APPROVAL') {
+        setMsg(res.data.message || 'Deletion request submitted for Admin approval.');
+      } else {
+        setMsg(`Student '${deleteTarget.full_name}' deleted successfully.`);
+      }
       loadData();
-      setTimeout(() => setMsg(''), 3000);
+      setTimeout(() => setMsg(''), 4000);
     } catch (err) {
       alert('Error deleting student: ' + (err.response?.data?.detail || err.message));
     } finally {
@@ -137,13 +148,19 @@ const StudentsPage = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/admin/students', formData);
+      const res = await api.post('/admin/students', formData);
       setShowModal(false);
       setFormData({
         username: '', email: '', password: '', full_name: '',
         register_number: '', department_id: '', class_id: '', phone: ''
       });
+      if (res.data?.status === 'PENDING_APPROVAL') {
+        setMsg(res.data.message || 'Enrollment submitted for Admin approval.');
+      } else {
+        setMsg('Student enrolled successfully.');
+      }
       loadData();
+      setTimeout(() => setMsg(''), 4000);
     } catch (err) {
       alert('Error creating student: ' + (err.response?.data?.detail || err.message));
     }
@@ -164,6 +181,18 @@ const StudentsPage = () => {
           Enroll New Student
         </button>
       </div>
+
+      {isHod && (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start space-x-3">
+          <Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-800">
+            <span className="font-bold">HOD Mode — Admin Approval Required: </span>
+            Any changes you make (enroll, edit, or remove students) will be submitted as a pending request
+            and must be approved by the System Administrator before taking effect.
+            Track your requests under <strong>My Approval Requests</strong> in the sidebar.
+          </div>
+        </div>
+      )}
 
       {msg && (
         <div className="p-3 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold">

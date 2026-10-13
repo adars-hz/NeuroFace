@@ -40,9 +40,12 @@ const StartSessionPage = () => {
     loadAssignmentsAndSlots();
   }, [preselected]);
 
+  const [activeSessionId, setActiveSessionId] = useState(null);
+
   const handleStart = async (e) => {
     e.preventDefault();
     setError('');
+    setActiveSessionId(null);
     setLoading(true);
     try {
       const res = await api.post('/attendance/sessions/start', {
@@ -52,7 +55,15 @@ const StartSessionPage = () => {
       });
       navigate(`/teacher/live-session/${res.data.id}`);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to start attendance session');
+      const detail = err.response?.data?.detail;
+      if (typeof detail === 'object' && detail !== null) {
+        setError(detail.message || 'Session overlap detected.');
+        if (detail.active_session_id) {
+          setActiveSessionId(detail.active_session_id);
+        }
+      } else {
+        setError(detail || 'Failed to start attendance session');
+      }
     } finally {
       setLoading(false);
     }
@@ -66,9 +77,21 @@ const StartSessionPage = () => {
       </div>
 
       {error && (
-        <div className="p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-sm flex items-start space-x-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+        <div className="p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded-xl text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+          {activeSessionId && (
+            <button
+              type="button"
+              onClick={() => navigate(`/teacher/live-session/${activeSessionId}`)}
+              className="px-4 py-2 bg-rose-600 text-white font-bold rounded-lg text-xs hover:bg-rose-700 transition flex items-center space-x-1 shrink-0 self-start sm:self-auto"
+            >
+              <Camera className="w-3.5 h-3.5 mr-1" />
+              <span>Resume Live Camera &rarr;</span>
+            </button>
+          )}
         </div>
       )}
 

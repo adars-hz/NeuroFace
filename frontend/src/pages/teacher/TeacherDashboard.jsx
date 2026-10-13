@@ -141,7 +141,7 @@ const TeacherDashboard = () => {
                   <td className="px-6 py-3.5 text-xs font-bold text-teal-700">
                     {s.present_count} / {s.total_enrolled} Present
                   </td>
-                  <td className="px-6 py-3.5">
+                  <td className="px-6 py-3.5 flex items-center space-x-2">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
                       s.status === 'ACTIVE'
                         ? 'bg-emerald-100 text-emerald-800 animate-pulse'
@@ -149,6 +149,14 @@ const TeacherDashboard = () => {
                     }`}>
                       {s.status}
                     </span>
+                    {s.status === 'ACTIVE' && (
+                      <Link
+                        to={`/teacher/live-session/${s.id}`}
+                        className="text-xs font-bold text-teal-600 hover:text-teal-700 underline"
+                      >
+                        Open Camera &rarr;
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}

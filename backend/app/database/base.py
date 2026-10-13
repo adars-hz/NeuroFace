@@ -5,6 +5,7 @@ from app.models.academic import Department, Class, Subject, TeacherSubjectClassA
 from app.models.attendance import AttendanceSession, AttendanceRecord, FaceEmbedding, AttendanceSessionStatus, AttendanceStatus, VerificationMethod
 from app.models.leave import LeaveApplication, LeaveDocument, OCRResult, MedicalWaiver, FineRule, FineRecord, LeaveStatus, FinePaymentStatus
 from app.models.audit import AuditLog
+from app.models.approval import HODApprovalRequest, ApprovalRequestType, ApprovalStatus
 
 __all__ = [
     "Base",
@@ -12,5 +13,5 @@ __all__ = [
     "Department", "Class", "Subject", "TeacherSubjectClassAssignment", "AttendanceSlot",
     "AttendanceSession", "AttendanceRecord", "FaceEmbedding", "AttendanceSessionStatus", "AttendanceStatus", "VerificationMethod",
     "LeaveApplication", "LeaveDocument", "OCRResult", "MedicalWaiver", "FineRule", "FineRecord", "LeaveStatus", "FinePaymentStatus",
-    "AuditLog"
+    "AuditLog", "HODApprovalRequest", "ApprovalRequestType", "ApprovalStatus"
 ]

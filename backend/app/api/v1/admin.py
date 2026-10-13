@@ -17,7 +17,9 @@ from app.schemas.academic import (
     SubjectCreate, SubjectOut, AssignmentCreate, AssignmentOut, SlotCreate, SlotOut
 )
 from app.schemas.leave import FineRuleUpdate, FineRuleOut
-from app.api.deps import get_current_admin
+import json
+from app.models.approval import HODApprovalRequest, ApprovalRequestType, ApprovalStatus
+from app.api.deps import get_current_admin, get_current_admin_or_hod
 from app.core.audit import log_audit_event
 from app.services.attendance_calculator import get_active_fine_rule
 
@@ -25,7 +27,7 @@ router = APIRouter()
 
 # ----------------- SYSTEM STATS -----------------
 @router.get("/stats")
-def get_system_stats(db: Session = Depends(get_db), current_admin: User = Depends(get_current_admin)):
+def get_system_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     total_students = db.query(Student).count()
     registered_faces = db.query(Student).filter(Student.face_registered == True).count()
     total_teachers = db.query(Teacher).count()
@@ -33,6 +35,7 @@ def get_system_stats(db: Session = Depends(get_db), current_admin: User = Depend
     total_subjects = db.query(Subject).count()
     total_sessions = db.query(AttendanceSession).count()
     total_attendance_marked = db.query(AttendanceRecord).count()
+    pending_approvals = db.query(HODApprovalRequest).filter(HODApprovalRequest.status == ApprovalStatus.PENDING).count()
 
     return {
         "total_students": total_students,
@@ -42,29 +45,48 @@ def get_system_stats(db: Session = Depends(get_db), current_admin: User = Depend
         "total_classes": total_classes,
         "total_subjects": total_subjects,
         "total_attendance_sessions": total_sessions,
-        "total_records_marked": total_attendance_marked
+        "total_records_marked": total_attendance_marked,
+        "pending_approvals_count": pending_approvals
     }
 
 # ----------------- DEPARTMENTS -----------------
 @router.get("/departments", response_model=List[DepartmentOut])
-def get_departments(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin)):
+def get_departments(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     return db.query(Department).all()
 
-@router.post("/departments", response_model=DepartmentOut)
-def create_department(dept_in: DepartmentCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+@router.post("/departments")
+def create_department(dept_in: DepartmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     existing = db.query(Department).filter(Department.code == dept_in.code).first()
     if existing:
         raise HTTPException(status_code=400, detail="Department code already exists")
+
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.CREATE_DEPARTMENT,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Create Department: {dept_in.name} ({dept_in.code.upper()})",
+            payload_json=json.dumps(dept_in.model_dump())
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Creation of department '{dept_in.name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
+
     dept = Department(code=dept_in.code.upper(), name=dept_in.name)
     db.add(dept)
     db.commit()
     db.refresh(dept)
-    log_audit_event(db, "CREATE_DEPARTMENT", "Department", admin.id, dept.id, {"code": dept.code})
+    log_audit_event(db, "CREATE_DEPARTMENT", "Department", current_user.id, dept.id, {"code": dept.code})
     return dept
 
 # ----------------- CLASSES -----------------
 @router.get("/classes", response_model=List[ClassOut])
-def get_classes(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def get_classes(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     classes = db.query(Class).all()
     results = []
     for c in classes:
@@ -80,8 +102,25 @@ def get_classes(db: Session = Depends(get_db), admin: User = Depends(get_current
         ))
     return results
 
-@router.post("/classes", response_model=ClassOut)
-def create_class(cls_in: ClassCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+@router.post("/classes")
+def create_class(cls_in: ClassCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.CREATE_CLASS,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Create Academic Class: {cls_in.name}",
+            payload_json=json.dumps(cls_in.model_dump())
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Creation of class '{cls_in.name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
+
     new_class = Class(
         name=cls_in.name,
         department_id=cls_in.department_id,
@@ -91,7 +130,7 @@ def create_class(cls_in: ClassCreate, db: Session = Depends(get_db), admin: User
     db.add(new_class)
     db.commit()
     db.refresh(new_class)
-    log_audit_event(db, "CREATE_CLASS", "Class", admin.id, new_class.id, {"name": new_class.name})
+    log_audit_event(db, "CREATE_CLASS", "Class", current_user.id, new_class.id, {"name": new_class.name})
     return ClassOut(
         id=new_class.id,
         name=new_class.name,
@@ -104,7 +143,7 @@ def create_class(cls_in: ClassCreate, db: Session = Depends(get_db), admin: User
 
 # ----------------- SUBJECTS -----------------
 @router.get("/subjects", response_model=List[SubjectOut])
-def get_subjects(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def get_subjects(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     subjects = db.query(Subject).all()
     results = []
     for s in subjects:
@@ -119,11 +158,29 @@ def get_subjects(db: Session = Depends(get_db), admin: User = Depends(get_curren
         ))
     return results
 
-@router.post("/subjects", response_model=SubjectOut)
-def create_subject(sub_in: SubjectCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+@router.post("/subjects")
+def create_subject(sub_in: SubjectCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     existing = db.query(Subject).filter(Subject.code == sub_in.code).first()
     if existing:
         raise HTTPException(status_code=400, detail="Subject code already exists")
+
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.CREATE_SUBJECT,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Create Subject: {sub_in.name} ({sub_in.code.upper()})",
+            payload_json=json.dumps(sub_in.model_dump())
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Creation of subject '{sub_in.name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
+
     sub = Subject(
         code=sub_in.code.upper(),
         name=sub_in.name,
@@ -134,7 +191,7 @@ def create_subject(sub_in: SubjectCreate, db: Session = Depends(get_db), admin: 
     db.add(sub)
     db.commit()
     db.refresh(sub)
-    log_audit_event(db, "CREATE_SUBJECT", "Subject", admin.id, sub.id, {"code": sub.code})
+    log_audit_event(db, "CREATE_SUBJECT", "Subject", current_user.id, sub.id, {"code": sub.code})
     return SubjectOut(
         id=sub.id,
         code=sub.code,
@@ -147,7 +204,7 @@ def create_subject(sub_in: SubjectCreate, db: Session = Depends(get_db), admin: 
 
 # ----------------- TEACHERS -----------------
 @router.get("/teachers", response_model=List[TeacherOut])
-def get_teachers(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def get_teachers(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     teachers = db.query(Teacher).all()
     results = []
     for t in teachers:
@@ -166,13 +223,33 @@ def get_teachers(db: Session = Depends(get_db), admin: User = Depends(get_curren
         ))
     return results
 
-@router.post("/teachers", response_model=TeacherOut)
-def create_teacher(t_in: TeacherCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+@router.post("/teachers")
+def create_teacher(t_in: TeacherCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     if db.query(User).filter((User.username == t_in.username) | (User.email == t_in.email)).first():
         raise HTTPException(status_code=400, detail="Username or Email already registered")
     if db.query(Teacher).filter(Teacher.teacher_code == t_in.teacher_code).first():
         raise HTTPException(status_code=400, detail="Teacher code already exists")
 
+    # If an HOD is requesting to add a teacher, put in pending approval for Admin
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.CREATE_TEACHER,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Add Faculty Member: {t_in.full_name} ({t_in.teacher_code})",
+            payload_json=json.dumps(t_in.model_dump())
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        log_audit_event(db, "HOD_REQUEST_CREATE_TEACHER", "HODApprovalRequest", current_user.id, req.id, {"teacher_code": t_in.teacher_code})
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Request to add faculty member '{t_in.full_name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
+
+    # Admin direct execution
     user = User(
         username=t_in.username,
         email=t_in.email,
@@ -196,7 +273,7 @@ def create_teacher(t_in: TeacherCreate, db: Session = Depends(get_db), admin: Us
     db.commit()
     db.refresh(teacher)
 
-    log_audit_event(db, "CREATE_TEACHER", "Teacher", admin.id, teacher.id, {"teacher_code": teacher.teacher_code})
+    log_audit_event(db, "CREATE_TEACHER", "Teacher", current_user.id, teacher.id, {"teacher_code": teacher.teacher_code})
 
     return TeacherOut(
         id=teacher.id,
@@ -214,7 +291,7 @@ def create_teacher(t_in: TeacherCreate, db: Session = Depends(get_db), admin: Us
 
 @router.put("/teachers/toggle-hod")
 def toggle_hod_designation(req: HODToggleRequest, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
-    """Assign or remove HOD designation from a teacher account."""
+    """Assign or remove HOD designation from a teacher account (Admin only)."""
     teacher = db.query(Teacher).filter(Teacher.id == req.teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
@@ -235,17 +312,36 @@ def toggle_hod_designation(req: HODToggleRequest, db: Session = Depends(get_db),
 
     return {"message": f"HOD status updated to {req.is_hod}", "designation": teacher.designation}
 
-@router.put("/teachers/{teacher_id}", response_model=TeacherOut)
+@router.put("/teachers/{teacher_id}")
 def update_teacher(
     teacher_id: int,
     t_in: TeacherUpdate,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    current_user: User = Depends(get_current_admin_or_hod)
 ):
-    """Update faculty member details, designation, department, contact, or password."""
+    """Update faculty member details. If HOD initiates, submits for Admin approval."""
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
+
+    if current_user.role != UserRole.ADMIN:
+        payload = t_in.model_dump()
+        payload["teacher_id"] = teacher_id
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.UPDATE_TEACHER,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Update Faculty Member: {teacher.full_name} ({teacher.teacher_code})",
+            payload_json=json.dumps(payload)
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Update request for '{teacher.full_name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
 
     user = teacher.user
     if t_in.email and t_in.email != user.email:
@@ -275,7 +371,7 @@ def update_teacher(
         db,
         action="UPDATE_TEACHER",
         entity_type="Teacher",
-        user_id=admin.id,
+        user_id=current_user.id,
         entity_id=teacher.id,
         details={"teacher_code": teacher.teacher_code, "full_name": teacher.full_name}
     )
@@ -298,12 +394,29 @@ def update_teacher(
 def delete_teacher(
     teacher_id: int,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    current_user: User = Depends(get_current_admin_or_hod)
 ):
-    """Delete a faculty member and associated user account."""
+    """Delete a faculty member. If HOD, submits for Admin approval."""
     teacher = db.query(Teacher).filter(Teacher.id == teacher_id).first()
     if not teacher:
         raise HTTPException(status_code=404, detail="Teacher not found")
+
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.DELETE_TEACHER,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Delete Faculty Member: {teacher.full_name} ({teacher.teacher_code})",
+            payload_json=json.dumps({"teacher_id": teacher_id})
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Deletion of '{teacher.full_name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
 
     user_id = teacher.user_id
     t_name = teacher.full_name
@@ -320,7 +433,7 @@ def delete_teacher(
         db,
         action="DELETE_TEACHER",
         entity_type="Teacher",
-        user_id=admin.id,
+        user_id=current_user.id,
         entity_id=teacher_id,
         details={"teacher_code": t_code, "full_name": t_name}
     )
@@ -329,7 +442,7 @@ def delete_teacher(
 
 # ----------------- STUDENTS -----------------
 @router.get("/students", response_model=List[StudentOut])
-def get_students(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def get_students(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     students = db.query(Student).all()
     results = []
     for s in students:
@@ -349,13 +462,33 @@ def get_students(db: Session = Depends(get_db), admin: User = Depends(get_curren
         ))
     return results
 
-@router.post("/students", response_model=StudentOut)
-def create_student(s_in: StudentCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+@router.post("/students")
+def create_student(s_in: StudentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     if db.query(User).filter((User.username == s_in.username) | (User.email == s_in.email)).first():
         raise HTTPException(status_code=400, detail="Username or Email already registered")
     if db.query(Student).filter(Student.register_number == s_in.register_number).first():
         raise HTTPException(status_code=400, detail="Student register number already exists")
 
+    # If HOD, queue for Admin approval
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.CREATE_STUDENT,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Enroll Student: {s_in.full_name} ({s_in.register_number})",
+            payload_json=json.dumps(s_in.model_dump())
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        log_audit_event(db, "HOD_REQUEST_CREATE_STUDENT", "HODApprovalRequest", current_user.id, req.id, {"register_number": s_in.register_number})
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Enrollment for student '{s_in.full_name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
+
+    # Admin direct execution
     user = User(
         username=s_in.username,
         email=s_in.email,
@@ -380,7 +513,7 @@ def create_student(s_in: StudentCreate, db: Session = Depends(get_db), admin: Us
     db.commit()
     db.refresh(student)
 
-    log_audit_event(db, "CREATE_STUDENT", "Student", admin.id, student.id, {"register_number": student.register_number})
+    log_audit_event(db, "CREATE_STUDENT", "Student", current_user.id, student.id, {"register_number": student.register_number})
 
     return StudentOut(
         id=student.id,
@@ -397,17 +530,36 @@ def create_student(s_in: StudentCreate, db: Session = Depends(get_db), admin: Us
         is_active=user.is_active
     )
 
-@router.put("/students/{student_id}", response_model=StudentOut)
+@router.put("/students/{student_id}")
 def update_student(
     student_id: int,
     s_in: StudentUpdate,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    current_user: User = Depends(get_current_admin_or_hod)
 ):
-    """Update student profile, registration number, class/dept assignment, or reset credentials/face."""
+    """Update student profile. If HOD, submits for Admin approval."""
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+
+    if current_user.role != UserRole.ADMIN:
+        payload = s_in.model_dump()
+        payload["student_id"] = student_id
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.UPDATE_STUDENT,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Update Student: {student.full_name} ({student.register_number})",
+            payload_json=json.dumps(payload)
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Update request for student '{student.full_name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
 
     user = student.user
     if s_in.email and s_in.email != user.email:
@@ -447,7 +599,7 @@ def update_student(
         db,
         action="UPDATE_STUDENT",
         entity_type="Student",
-        user_id=admin.id,
+        user_id=current_user.id,
         entity_id=student.id,
         details={"register_number": student.register_number, "full_name": student.full_name}
     )
@@ -471,7 +623,7 @@ def update_student(
 def reset_student_face(
     student_id: int,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    current_user: User = Depends(get_current_admin_or_hod)
 ):
     """Clear registered biometric face embedding for a student to allow re-enrollment."""
     student = db.query(Student).filter(Student.id == student_id).first()
@@ -486,7 +638,7 @@ def reset_student_face(
         db,
         action="RESET_STUDENT_FACE",
         entity_type="Student",
-        user_id=admin.id,
+        user_id=current_user.id,
         entity_id=student.id,
         details={"register_number": student.register_number, "deleted_embeddings": deleted_count}
     )
@@ -501,12 +653,29 @@ def reset_student_face(
 def delete_student(
     student_id: int,
     db: Session = Depends(get_db),
-    admin: User = Depends(get_current_admin)
+    current_user: User = Depends(get_current_admin_or_hod)
 ):
-    """Delete student and all associated records (face templates, attendance, waivers, etc.)."""
+    """Delete student. If HOD, submits for Admin approval."""
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
+
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.DELETE_STUDENT,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Delete Student: {student.full_name} ({student.register_number})",
+            payload_json=json.dumps({"student_id": student_id})
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Deletion of '{student.full_name}' submitted for Admin approval.",
+            "request_id": req.id
+        }
 
     user_id = student.user_id
     s_name = student.full_name
@@ -523,7 +692,7 @@ def delete_student(
         db,
         action="DELETE_STUDENT",
         entity_type="Student",
-        user_id=admin.id,
+        user_id=current_user.id,
         entity_id=student_id,
         details={"register_number": s_reg, "full_name": s_name}
     )
@@ -532,7 +701,7 @@ def delete_student(
 
 # ----------------- ASSIGNMENTS -----------------
 @router.get("/assignments", response_model=List[AssignmentOut])
-def get_assignments(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def get_assignments(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     assignments = db.query(TeacherSubjectClassAssignment).all()
     results = []
     for a in assignments:
@@ -549,8 +718,8 @@ def get_assignments(db: Session = Depends(get_db), admin: User = Depends(get_cur
         ))
     return results
 
-@router.post("/assignments", response_model=AssignmentOut)
-def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+@router.post("/assignments")
+def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     existing = db.query(TeacherSubjectClassAssignment).filter(
         TeacherSubjectClassAssignment.teacher_id == a_in.teacher_id,
         TeacherSubjectClassAssignment.subject_id == a_in.subject_id,
@@ -558,6 +727,30 @@ def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), adm
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Assignment already exists")
+
+    if current_user.role != UserRole.ADMIN:
+        teacher = db.query(Teacher).filter(Teacher.id == a_in.teacher_id).first()
+        subj = db.query(Subject).filter(Subject.id == a_in.subject_id).first()
+        cls = db.query(Class).filter(Class.id == a_in.class_id).first()
+        t_name = teacher.full_name if teacher else f"ID {a_in.teacher_id}"
+        s_name = subj.name if subj else f"ID {a_in.subject_id}"
+        c_name = cls.name if cls else f"ID {a_in.class_id}"
+
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.CREATE_ASSIGNMENT,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Assign {t_name} to {s_name} ({c_name})",
+            payload_json=json.dumps(a_in.model_dump())
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": f"Subject assignment submitted for Admin approval.",
+            "request_id": req.id
+        }
 
     a = TeacherSubjectClassAssignment(
         teacher_id=a_in.teacher_id,
@@ -568,7 +761,7 @@ def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), adm
     db.commit()
     db.refresh(a)
 
-    log_audit_event(db, "ASSIGN_TEACHER", "Assignment", admin.id, a.id, {
+    log_audit_event(db, "ASSIGN_TEACHER", "Assignment", current_user.id, a.id, {
         "teacher_id": a.teacher_id, "subject_id": a.subject_id, "class_id": a.class_id
     })
 
@@ -585,13 +778,31 @@ def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), adm
     )
 
 @router.delete("/assignments/{id}")
-def delete_assignment(id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def delete_assignment(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
     a = db.query(TeacherSubjectClassAssignment).filter(TeacherSubjectClassAssignment.id == id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Assignment not found")
+
+    if current_user.role != UserRole.ADMIN:
+        req = HODApprovalRequest(
+            request_type=ApprovalRequestType.DELETE_ASSIGNMENT,
+            status=ApprovalStatus.PENDING,
+            requested_by_id=current_user.id,
+            title=f"Revoke Assignment: {a.teacher.full_name} from {a.subject.name} ({a.class_assigned.name})",
+            payload_json=json.dumps({"assignment_id": id})
+        )
+        db.add(req)
+        db.commit()
+        db.refresh(req)
+        return {
+            "status": "PENDING_APPROVAL",
+            "message": "Revocation request submitted for Admin approval.",
+            "request_id": req.id
+        }
+
     db.delete(a)
     db.commit()
-    log_audit_event(db, "DELETE_ASSIGNMENT", "Assignment", admin.id, id)
+    log_audit_event(db, "DELETE_ASSIGNMENT", "Assignment", current_user.id, id)
     return {"message": "Assignment deleted successfully"}
 
 # ----------------- SLOTS -----------------

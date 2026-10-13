@@ -60,6 +60,17 @@ def get_current_hod(current_user: User = Depends(get_current_teacher)) -> User:
         )
     return current_user
 
+def get_current_admin_or_hod(current_user: User = Depends(get_current_user)) -> User:
+    """Check if current user is either a system Admin or an authorized HOD."""
+    if current_user.role == UserRole.ADMIN:
+        return current_user
+    if current_user.role == UserRole.TEACHER and current_user.teacher_profile and current_user.teacher_profile.designation == TeacherDesignation.HOD:
+        return current_user
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Administrative or HOD elevated authorization required"
+    )
+
 def get_current_student(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != UserRole.STUDENT:
         raise HTTPException(

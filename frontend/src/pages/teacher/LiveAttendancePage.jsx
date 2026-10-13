@@ -252,8 +252,22 @@ const LiveAttendancePage = () => {
       </div>
 
       {cameraError && (
-        <div className="p-4 bg-rose-50 text-rose-700 border border-rose-200 rounded-2xl text-sm">
-          {cameraError}
+        <div className="p-5 bg-rose-50 text-rose-800 border border-rose-200 rounded-2xl text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <div className="font-bold flex items-center space-x-2 text-rose-900">
+              <AlertTriangle className="w-5 h-5 text-rose-600" />
+              <span>Camera Access Blocked or Not Found</span>
+            </div>
+            <p className="text-xs text-rose-700">
+              {cameraError} Check your browser's address bar (click the camera/lock icon) and ensure permissions are set to "Allow".
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 transition shrink-0"
+          >
+            Retry Camera Access
+          </button>
         </div>
       )}
 

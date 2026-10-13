@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, Clock,
   Camera, FileText, CheckSquare, Settings, Activity,
@@ -11,6 +12,15 @@ const Sidebar = () => {
   const { user } = useAuth();
   const role = user?.role;
   const isHod = user?.is_hod;
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (isHod || role === 'ADMIN') {
+      api.get('/admin/approvals/pending-count')
+        .then(res => setPendingCount(res.data.pending_count || 0))
+        .catch(() => {});
+    }
+  }, [isHod, role]);
 
   const linkClass = ({ isActive }) =>
     `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -61,6 +71,15 @@ const Sidebar = () => {
                 <Activity className="w-4 h-4" />
                 <span>Audit Logs</span>
               </NavLink>
+              <NavLink to="/admin/approvals" className={linkClass}>
+                <ShieldAlert className="w-4 h-4 text-amber-500" />
+                <span className="flex-1">HOD Approvals</span>
+                {pendingCount > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+                    {pendingCount}
+                  </span>
+                )}
+              </NavLink>
             </nav>
           </div>
         )}
@@ -91,7 +110,7 @@ const Sidebar = () => {
               <div className="mt-6 pt-5 border-t border-slate-200">
                 <div className="px-3 flex items-center space-x-2 text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">
                   <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
-                  <span>HOD Department Tools</span>
+                  <span>HOD Admin Tools</span>
                 </div>
                 <nav className="space-y-1">
                   <NavLink to="/teacher/hod-overview" className={linkClass}>
@@ -101,6 +120,31 @@ const Sidebar = () => {
                   <NavLink to="/teacher/medical-waivers" className={linkClass}>
                     <FileCheck2 className="w-4 h-4" />
                     <span>Approve Medical Waivers</span>
+                  </NavLink>
+                  <NavLink to="/admin/teachers" className={linkClass}>
+                    <Users className="w-4 h-4 text-teal-600" />
+                    <span>Manage Teachers</span>
+                  </NavLink>
+                  <NavLink to="/admin/students" className={linkClass}>
+                    <GraduationCap className="w-4 h-4 text-teal-600" />
+                    <span>Manage Students</span>
+                  </NavLink>
+                  <NavLink to="/admin/academic" className={linkClass}>
+                    <BookOpen className="w-4 h-4 text-teal-600" />
+                    <span>Academic Setup</span>
+                  </NavLink>
+                  <NavLink to="/admin/assignments" className={linkClass}>
+                    <CheckSquare className="w-4 h-4 text-teal-600" />
+                    <span>Teacher Assignments</span>
+                  </NavLink>
+                  <NavLink to="/teacher/my-requests" className={linkClass}>
+                    <Clock className="w-4 h-4 text-amber-600" />
+                    <span className="flex-1">My Approval Requests</span>
+                    {pendingCount > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+                        {pendingCount}
+                      </span>
+                    )}
                   </NavLink>
                 </nav>
               </div>

@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.database.base import Base
 from app.database.session import engine
-from app.api.v1 import auth, admin, teacher, attendance, student, leaves, reports
+from app.api.v1 import auth, admin, teacher, attendance, student, leaves, reports, approvals
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +43,7 @@ app.include_router(attendance.router, prefix=f"{settings.API_V1_STR}/attendance"
 app.include_router(student.router, prefix=f"{settings.API_V1_STR}/student", tags=["Student Portal"])
 app.include_router(leaves.router, prefix=f"{settings.API_V1_STR}/leaves", tags=["Leaves & OCR"])
 app.include_router(reports.router, prefix=f"{settings.API_V1_STR}/reports", tags=["Reports & Analytics"])
+app.include_router(approvals.router, prefix=f"{settings.API_V1_STR}/admin", tags=["HOD Approvals"])
 
 @app.get("/")
 def root():

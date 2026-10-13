@@ -41,8 +41,11 @@ const AcademicSetupPage = () => {
   const handleAddDept = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/admin/departments', deptForm);
+      const res = await api.post('/admin/departments', deptForm);
       setDeptForm({ code: '', name: '' });
+      if (res.data?.status === 'PENDING_APPROVAL') {
+        alert(res.data.message || 'Department creation submitted for Admin approval.');
+      }
       loadData();
     } catch (err) {
       alert(err.response?.data?.detail || err.message);
@@ -52,8 +55,11 @@ const AcademicSetupPage = () => {
   const handleAddClass = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/admin/classes', classForm);
+      const res = await api.post('/admin/classes', classForm);
       setClassForm({ name: '', department_id: '', semester: 1, academic_year: '2025-2026' });
+      if (res.data?.status === 'PENDING_APPROVAL') {
+        alert(res.data.message || 'Class creation submitted for Admin approval.');
+      }
       loadData();
     } catch (err) {
       alert(err.response?.data?.detail || err.message);
@@ -63,8 +69,11 @@ const AcademicSetupPage = () => {
   const handleAddSubject = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/admin/subjects', subForm);
+      const res = await api.post('/admin/subjects', subForm);
       setSubForm({ code: '', name: '', department_id: '', semester: 1, total_credits: 4 });
+      if (res.data?.status === 'PENDING_APPROVAL') {
+        alert(res.data.message || 'Subject creation submitted for Admin approval.');
+      }
       loadData();
     } catch (err) {
       alert(err.response?.data?.detail || err.message);

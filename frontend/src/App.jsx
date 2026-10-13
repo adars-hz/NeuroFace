@@ -14,6 +14,7 @@ import AssignmentsPage from './pages/admin/AssignmentsPage';
 import FineRulesPage from './pages/admin/FineRulesPage';
 import AuditLogsPage from './pages/admin/AuditLogsPage';
 import DatabaseExplorerPage from './pages/admin/DatabaseExplorerPage';
+import ApprovalsPage from './pages/admin/ApprovalsPage';
 
 import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import StartSessionPage from './pages/teacher/StartSessionPage';
@@ -21,6 +22,7 @@ import LiveAttendancePage from './pages/teacher/LiveAttendancePage';
 import TeacherLeavesPage from './pages/teacher/TeacherLeavesPage';
 import HODOversightPage from './pages/teacher/HODOversightPage';
 import MedicalWaiverPage from './pages/teacher/MedicalWaiverPage';
+import HODMyRequestsPage from './pages/teacher/HODMyRequestsPage';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import FaceRegistrationPage from './pages/student/FaceRegistrationPage';
@@ -45,11 +47,11 @@ function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<RootRedirect />} />
 
-          {/* ADMIN PROTECTED ROUTES */}
+          {/* ADMIN & HOD PROTECTED ROUTES */}
           <Route
             path="/admin"
             element={
-              <RoleGuard allowedRoles={['ADMIN']}>
+              <RoleGuard allowedRoles={['ADMIN']} allowHod={true}>
                 <DashboardLayout />
               </RoleGuard>
             }
@@ -62,6 +64,7 @@ function App() {
             <Route path="fine-rules" element={<FineRulesPage />} />
             <Route path="database" element={<DatabaseExplorerPage />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
+            <Route path="approvals" element={<ApprovalsPage />} />
           </Route>
 
           {/* TEACHER & HOD PROTECTED ROUTES */}
@@ -92,6 +95,14 @@ function App() {
               element={
                 <RoleGuard allowedRoles={['TEACHER']} requireHod={true}>
                   <MedicalWaiverPage />
+                </RoleGuard>
+              }
+            />
+            <Route
+              path="my-requests"
+              element={
+                <RoleGuard allowedRoles={['TEACHER']} requireHod={true}>
+                  <HODMyRequestsPage />
                 </RoleGuard>
               }
             />

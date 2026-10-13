@@ -28,28 +28,32 @@ router = APIRouter()
 
 def auto_expire_stale_sessions(db: Session):
     """Check for active sessions that have exceeded their scheduled end time and mark them EXPIRED."""
-    now = datetime.now(timezone.utc)
-    stale_sessions = db.query(AttendanceSession).filter(
-        AttendanceSession.status == AttendanceSessionStatus.ACTIVE,
-        AttendanceSession.end_time < now
+    now_utc = datetime.now(timezone.utc)
+    now_naive = datetime.utcnow()
+    # Check sessions where end_time has passed (handling naive and utc-aware records)
+    active_sessions = db.query(AttendanceSession).filter(
+        AttendanceSession.status == AttendanceSessionStatus.ACTIVE
     ).all()
 
-    for s in stale_sessions:
-        s.status = AttendanceSessionStatus.EXPIRED
-        # Mark unrecorded enrolled students as ABSENT
-        enrolled_students = db.query(Student).filter(Student.class_id == s.assignment.class_id).all()
-        marked_ids = {r.student_id for r in s.records}
-        for stu in enrolled_students:
-            if stu.id not in marked_ids:
-                db.add(AttendanceRecord(
-                    session_id=s.id,
-                    student_id=stu.id,
-                    status=AttendanceStatus.ABSENT,
-                    verification_method=VerificationMethod.FACE_RECOGNITION,
-                    marked_by="System Expiry"
-                ))
-    if stale_sessions:
-        db.commit()
+    for s in active_sessions:
+        s_end = s.end_time
+        if s_end is not None:
+            if s_end.tzinfo is None:
+                s_end = s_end.replace(tzinfo=timezone.utc)
+            if s_end < now_utc:
+                s.status = AttendanceSessionStatus.EXPIRED
+                enrolled_students = db.query(Student).filter(Student.class_id == s.assignment.class_id).all()
+                marked_ids = {r.student_id for r in s.records}
+                for stu in enrolled_students:
+                    if stu.id not in marked_ids:
+                        db.add(AttendanceRecord(
+                            session_id=s.id,
+                            student_id=stu.id,
+                            status=AttendanceStatus.ABSENT,
+                            verification_method=VerificationMethod.FACE_RECOGNITION,
+                            marked_by="Auto Expire"
+                        ))
+    db.commit()
 
 @router.post("/sessions/start", response_model=SessionOut)
 def start_attendance_session(
@@ -85,7 +89,10 @@ def start_attendance_session(
     if overlap:
         raise HTTPException(
             status_code=400,
-            detail=f"Class '{assignment.class_assigned.name}' already has an active attendance session ({overlap.assignment.subject.name})."
+            detail={
+                "message": f"Class '{assignment.class_assigned.name}' already has an active attendance session ({overlap.assignment.subject.name}).",
+                "active_session_id": overlap.id
+            }
         )
 
     # 3. Calculate start and end times
@@ -152,7 +159,12 @@ def get_live_session_stats(
         raise HTTPException(status_code=404, detail="Session not found")
 
     now = datetime.now(timezone.utc)
-    if session.status == AttendanceSessionStatus.ACTIVE and session.end_time < now:
+    # Handle SQLite timezone-naive or aware datetime comparison
+    session_end = session.end_time
+    if session_end is not None and session_end.tzinfo is None:
+        session_end = session_end.replace(tzinfo=timezone.utc)
+
+    if session.status == AttendanceSessionStatus.ACTIVE and session_end < now:
         session.status = AttendanceSessionStatus.EXPIRED
         db.commit()
 
@@ -163,7 +175,7 @@ def get_live_session_stats(
     ).count()
     absent_count = max(0, total_enrolled - present_count)
 
-    time_remaining = max(0, int((session.end_time - now).total_seconds())) if session.status == AttendanceSessionStatus.ACTIVE else 0
+    time_remaining = max(0, int((session_end - now).total_seconds())) if session.status == AttendanceSessionStatus.ACTIVE else 0
 
     return LiveSessionStats(
         session_id=session.id,
