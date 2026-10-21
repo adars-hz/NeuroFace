@@ -59,10 +59,6 @@ const Sidebar = () => {
                 <CheckSquare className="w-4 h-4" />
                 <span>Teacher Assignments</span>
               </NavLink>
-              <NavLink to="/admin/fine-rules" className={linkClass}>
-                <Sliders className="w-4 h-4" />
-                <span>Fine & 85% Rules</span>
-              </NavLink>
               <NavLink to="/admin/database" className={linkClass}>
                 <Database className="w-4 h-4" />
                 <span>Database Explorer</span>

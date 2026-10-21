@@ -44,8 +44,8 @@ const MyAttendancePage = () => {
       {/* Header & Export Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-heading">Subject-Wise Attendance & Eligibility</h1>
-          <p className="text-slate-600 text-sm">Real-time attendance calculations evaluating the mandatory 85% institutional examination rule</p>
+          <h1 className="text-2xl font-bold text-slate-900 font-heading">Subject-Wise Attendance</h1>
+          <p className="text-slate-600 text-sm">Real-time attendance calculations and session summary across all registered courses</p>
         </div>
 
         <div className="flex items-center space-x-3">
@@ -79,35 +79,20 @@ const MyAttendancePage = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {report?.all_subjects_eligible ? (
-            <div className="px-4 py-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center space-x-2">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              <span>All Subjects Meet 85% Direct Exam Eligibility</span>
-            </div>
-          ) : (
-            <div className="px-4 py-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold flex items-center space-x-2">
-              <AlertTriangle className="w-5 h-5 text-amber-600" />
-              <span>Deficient Subject(s) Detected - Condonation / Waiver Action Required</span>
-            </div>
-          )}
+          <div className="px-4 py-2.5 rounded-2xl bg-teal-50 border border-teal-200 text-teal-800 text-xs font-bold flex items-center space-x-2">
+            <CheckCircle2 className="w-5 h-5 text-teal-600" />
+            <span>Enrolled: {report?.class_name || 'Active'}</span>
+          </div>
         </div>
       </div>
 
       {/* Subject Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {report?.subjects.map((sub) => {
-          const isEligible = sub.is_eligible;
-          const isCondonation = sub.requires_fine;
-          const isDetained = !isEligible && !isCondonation;
-
           return (
             <div
               key={sub.subject_id}
-              className={`p-6 rounded-3xl bg-white border shadow-sm space-y-4 transition-all ${
-                isEligible ? 'border-slate-200 hover:border-emerald-300' :
-                isCondonation ? 'border-amber-300 bg-amber-50/20' :
-                'border-rose-300 bg-rose-50/20'
-              }`}
+              className="p-6 rounded-3xl bg-white border border-slate-200 hover:border-teal-300 shadow-sm space-y-4 transition-all"
             >
               <div className="flex items-start justify-between">
                 <div>
@@ -119,31 +104,21 @@ const MyAttendancePage = () => {
                   </h3>
                 </div>
                 <div className="text-right">
-                  <div className={`text-2xl font-extrabold font-heading ${
-                    isEligible ? 'text-emerald-600' : isCondonation ? 'text-amber-600' : 'text-rose-600'
-                  }`}>
+                  <div className="text-2xl font-extrabold font-heading text-teal-600">
                     {sub.effective_attendance_pct}%
                   </div>
                   <div className="text-[10px] text-slate-500">Effective %</div>
                 </div>
               </div>
 
-              {/* Progress Bar with 85% Threshold Indicator */}
+              {/* Progress Bar */}
               <div className="relative pt-2">
                 <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                   <div
-                    className={`h-2.5 rounded-full transition-all duration-500 ${
-                      isEligible ? 'bg-emerald-500' : isCondonation ? 'bg-amber-500' : 'bg-rose-500'
-                    }`}
+                    className="h-2.5 rounded-full transition-all duration-500 bg-teal-500"
                     style={{ width: `${Math.min(100, sub.effective_attendance_pct)}%` }}
                   ></div>
                 </div>
-                {/* 85% Target Line */}
-                <div
-                  className="absolute top-0 bottom-0 w-0.5 bg-slate-800 z-10"
-                  style={{ left: '85%' }}
-                  title="Mandatory 85% Threshold"
-                ></div>
               </div>
 
               {/* Breakdown Grid */}
@@ -168,20 +143,10 @@ const MyAttendancePage = () => {
 
               {/* Status Badge */}
               <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-500 font-medium">Exam Status:</span>
-                {isEligible ? (
-                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    Direct Eligible
-                  </span>
-                ) : isCondonation ? (
-                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                    Condonation Fine: ₹{sub.fine_amount}
-                  </span>
-                ) : (
-                  <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-800 border border-rose-200">
-                    Detained (&lt; 75%)
-                  </span>
-                )}
+                <span className="text-slate-500 font-medium">Attendance:</span>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-bold bg-teal-50 text-teal-700 border border-teal-200">
+                  {sub.present_classes} / {sub.total_classes} Classes Present
+                </span>
               </div>
             </div>
           );

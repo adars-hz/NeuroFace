@@ -122,19 +122,16 @@ const StudentDashboard = () => {
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Exam Eligibility Status</div>
-          <div className="text-xl font-extrabold font-heading mt-2">
-            {report?.all_subjects_eligible ? (
-              <span className="text-emerald-600 flex items-center">
-                <CheckCircle2 className="w-5 h-5 mr-1.5" /> Direct Eligible
-              </span>
-            ) : (
-              <span className="text-amber-600 flex items-center">
-                <AlertTriangle className="w-5 h-5 mr-1.5" /> Action Needed
-              </span>
-            )}
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Registered Courses</div>
+          <div className="text-3xl font-extrabold text-slate-900 font-heading mt-2">
+            {report?.subjects?.length || 0}
           </div>
-          <div className="text-xs text-slate-500 mt-1">Minimum 85% rule per subject</div>
+          <div className="text-xs text-slate-500 mt-1">Active curriculum subjects</div>
+          <div className="mt-2">
+            <Link to="/student/my-attendance" className="text-xs font-bold text-teal-600 hover:text-teal-700">
+              View Attendance Breakdown &rarr;
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">

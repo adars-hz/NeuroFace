@@ -135,17 +135,17 @@ const AdminDashboard = () => {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
           <div className="font-bold text-slate-900 font-heading flex items-center space-x-2">
             <Activity className="w-5 h-5 text-purple-600" />
-            <span>Institutional Policies & Logs</span>
+            <span>System Audit & Activity Logs</span>
           </div>
           <p className="text-xs text-slate-600">
-            Configure the 85% attendance eligibility rule, 75% condonation fine fees, and inspect audit trails.
+            Inspect real-time system audit trails, authentication logs, and biometric session histories.
           </p>
           <div className="pt-2">
             <Link
-              to="/admin/fine-rules"
+              to="/admin/audit-logs"
               className="inline-flex items-center text-xs font-bold text-purple-600 hover:text-purple-700"
             >
-              Edit Policies &rarr;
+              View Audit Logs &rarr;
             </Link>
           </div>
         </div>

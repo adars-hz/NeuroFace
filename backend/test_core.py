@@ -33,56 +33,45 @@ def run_tests():
     assert prof_rahul.teacher_profile.is_hod == False, "Rahul must NOT have designation HOD"
     print("[PASS] Test 2: Teacher and HOD role separation (single TEACHER role, HOD designation)")
 
-    # Test 3: Attendance percentage & eligibility calculations
-    # Student 1: Arun (Eligible >= 85%)
-    stu_arun = db.query(User).filter(User.username == "student_arun").first().student_profile
-    report_arun = calculate_student_full_report(db, stu_arun.id)
-    ml_stat_arun = next(s for s in report_arun.subjects if s.subject_code == "MCA301")
-    expected_arun_pct = round((ml_stat_arun.present_classes / ml_stat_arun.total_classes) * 100, 2)
-    assert ml_stat_arun.raw_attendance_pct == expected_arun_pct, f"Expected {expected_arun_pct}%, got {ml_stat_arun.raw_attendance_pct}"
-    assert ml_stat_arun.is_eligible == (ml_stat_arun.effective_attendance_pct >= 85.0), "Arun eligibility mismatch"
-    print(f"[PASS] Test 3: Arun attendance = {ml_stat_arun.effective_attendance_pct}% (Eligible: {ml_stat_arun.is_eligible})")
+    # Test 3: Attendance percentage calculations
+    stu_arun = db.query(User).filter(User.username == "student_arun").first()
+    if stu_arun and stu_arun.student_profile:
+        report_arun = calculate_student_full_report(db, stu_arun.student_profile.id)
+        ml_stat_arun = next(s for s in report_arun.subjects if s.subject_code == "MCA301")
+        expected_arun_pct = round((ml_stat_arun.present_classes / ml_stat_arun.total_classes) * 100, 2)
+        assert ml_stat_arun.raw_attendance_pct == expected_arun_pct, f"Expected {expected_arun_pct}%, got {ml_stat_arun.raw_attendance_pct}"
+        assert ml_stat_arun.is_eligible is True, "Student should default to eligible (no exam threshold)"
+        assert ml_stat_arun.requires_fine is False, "Fine should be disabled"
+        print(f"[PASS] Test 3: Arun attendance = {ml_stat_arun.effective_attendance_pct}%")
 
-    # Student 2: Priya (Condonation with fine if 75 <= pct < 85)
-    stu_priya = db.query(User).filter(User.username == "student_priya").first().student_profile
-    report_priya = calculate_student_full_report(db, stu_priya.id)
-    ml_stat_priya = next(s for s in report_priya.subjects if s.subject_code == "MCA301")
-    expected_priya_pct = round((ml_stat_priya.present_classes / ml_stat_priya.total_classes) * 100, 2)
-    assert ml_stat_priya.raw_attendance_pct == expected_priya_pct, f"Expected {expected_priya_pct}%, got {ml_stat_priya.raw_attendance_pct}"
-    print(f"[PASS] Test 4: Priya attendance = {ml_stat_priya.effective_attendance_pct}% (Status: {ml_stat_priya.fine_status})")
+    # Test 4: Medical Waiver Impact
+    if stu_arun and stu_arun.student_profile:
+        # Clean up any existing test waivers for Arun first
+        db.query(MedicalWaiver).filter(MedicalWaiver.student_id == stu_arun.student_profile.id).delete()
+        db.commit()
 
-    # Student 3: Rohit (Detained if < 75%)
-    stu_rohit = db.query(User).filter(User.username == "student_rohit").first().student_profile
-    report_rohit = calculate_student_full_report(db, stu_rohit.id)
-    ml_stat_rohit = next(s for s in report_rohit.subjects if s.subject_code == "MCA301")
-    expected_rohit_pct = round((ml_stat_rohit.present_classes / ml_stat_rohit.total_classes) * 100, 2)
-    assert ml_stat_rohit.raw_attendance_pct == expected_rohit_pct, f"Expected {expected_rohit_pct}%, got {ml_stat_rohit.raw_attendance_pct}"
-    print(f"[PASS] Test 5: Rohit attendance = {ml_stat_rohit.effective_attendance_pct}% (Status: {ml_stat_rohit.fine_status})")
+        # Grant Arun a medical waiver for 1 class in MCA301
+        waiver = MedicalWaiver(
+            student_id=stu_arun.student_profile.id,
+            subject_id=ml_stat_arun.subject_id,
+            waived_classes_count=1,
+            applied_rule="HOD_MEDICAL_WAIVER_ADD_PRESENT",
+            approved_by=hod_user.id,
+            remarks="Approved 1 medical waiver class"
+        )
+        db.add(waiver)
+        db.commit()
 
-    # Test 6: Medical Waiver Impact
-    # Clean up any existing test waivers for Rohit first
-    db.query(MedicalWaiver).filter(MedicalWaiver.student_id == stu_rohit.id).delete()
-    db.commit()
+        # Recalculate Arun's attendance
+        report_arun_after = calculate_student_full_report(db, stu_arun.student_profile.id)
+        ml_stat_after = next(s for s in report_arun_after.subjects if s.subject_code == "MCA301")
+        expected_waiver_pct = min(100.0, round(((ml_stat_arun.present_classes + 1) / ml_stat_arun.total_classes) * 100, 2))
+        assert ml_stat_after.effective_attendance_pct == expected_waiver_pct, f"Expected {expected_waiver_pct}% after waiver, got {ml_stat_after.effective_attendance_pct}"
+        print(f"[PASS] Test 4: Arun attendance after medical waiver = {ml_stat_after.effective_attendance_pct}%")
 
-    # Grant Rohit a medical waiver for 2 classes in MCA301
-    waiver = MedicalWaiver(
-        student_id=stu_rohit.id,
-        subject_id=ml_stat_rohit.subject_id,
-        waived_classes_count=2,
-        applied_rule="HOD_MEDICAL_WAIVER_ADD_PRESENT",
-        approved_by=hod_user.id,
-        remarks="Approved 2 medical waiver classes for viral fever"
-    )
-    db.add(waiver)
-    db.commit()
-
-    # Recalculate Rohit's attendance
-    report_rohit_after = calculate_student_full_report(db, stu_rohit.id)
-    ml_stat_after = next(s for s in report_rohit_after.subjects if s.subject_code == "MCA301")
-    expected_waiver_pct = min(100.0, round(((ml_stat_rohit.present_classes + 2) / ml_stat_rohit.total_classes) * 100, 2))
-    assert ml_stat_after.effective_attendance_pct == expected_waiver_pct, f"Expected {expected_waiver_pct}% after waiver, got {ml_stat_after.effective_attendance_pct}"
-    assert ml_stat_after.is_eligible == (ml_stat_after.effective_attendance_pct >= 85.0), "Rohit eligibility mismatch after waiver"
-    print(f"[PASS] Test 6: Rohit attendance after HOD medical waiver = {ml_stat_after.effective_attendance_pct}% (Eligible: {ml_stat_after.is_eligible})")
+        # Clean up test waiver
+        db.delete(waiver)
+        db.commit()
 
     # Test 7: AI Facial Quality and Embedding Dimensions
     dummy_face = np.full((112, 112, 3), 120, dtype=np.uint8)

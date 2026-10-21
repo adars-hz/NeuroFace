@@ -101,29 +101,11 @@ def calculate_student_subject_attendance(
 
     absent_count = max(0, total_sessions - present_count)
 
-    # Evaluate against institutional thresholds
-    is_eligible = effective_pct >= fine_rule.min_eligible_pct
+    # Evaluate attendance metrics (exam eligibility and fine removed)
+    is_eligible = True
     requires_fine = False
     fine_amt = 0.0
     fine_status = "NONE"
-
-    if is_eligible:
-        fine_status = "NONE"
-    elif effective_pct >= fine_rule.condonation_min_pct:
-        requires_fine = True
-        fine_amt = fine_rule.fine_amount
-        # Check existing fine record
-        fine_rec = db.query(FineRecord).filter(
-            FineRecord.student_id == student_id,
-            FineRecord.subject_id == subject_id
-        ).first()
-        if fine_rec:
-            fine_status = fine_rec.payment_status.value
-        else:
-            fine_status = "UNPAID"
-    else:
-        # Below condonation threshold: detained
-        fine_status = "DETAINED"
 
     return SubjectAttendanceStat(
         subject_id=subject.id,
@@ -164,8 +146,6 @@ def calculate_student_full_report(db: Session, student_id: int) -> StudentAttend
         stat = calculate_student_subject_attendance(db, student_id, sub.id, fine_rule)
         subject_stats.append(stat)
         total_effective_pct += stat.effective_attendance_pct
-        if not stat.is_eligible and not stat.requires_fine:
-            all_eligible = False
 
     overall_pct = round(total_effective_pct / len(subject_stats), 2) if subject_stats else 100.0
 
