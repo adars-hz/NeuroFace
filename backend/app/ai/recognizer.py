@@ -1,7 +1,6 @@
 import os
 import cv2
 import numpy as np
-import torch
 from typing import List, Tuple, Optional, Dict
 from app.core.config import settings
 
@@ -12,8 +11,15 @@ class FaceRecognizer:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(FaceRecognizer, cls).__new__(cls)
-            cls._instance._init_model()
+            cls._instance._initialized = False
+            cls._instance.onnx_session = None
+            cls._instance.torch_fallback = None
         return cls._instance
+
+    def _ensure_initialized(self):
+        if not self._initialized:
+            self._init_model()
+            self._initialized = True
 
     def _init_model(self):
         self.onnx_session = None
@@ -31,6 +37,7 @@ class FaceRecognizer:
                 print(f"[ArcFace] Could not load ONNX model ({e}), falling back to Torch InceptionResnetV1.")
 
         # Robust built-in fallback: InceptionResnetV1 (512-D normalized embeddings)
+        import torch
         from facenet_pytorch import InceptionResnetV1
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.torch_fallback = InceptionResnetV1(pretrained='vggface2').eval().to(device)
@@ -42,6 +49,7 @@ class FaceRecognizer:
         Input: Aligned 112x112 BGR or RGB face crop.
         Output: 512-D float32 numpy array with L2 norm = 1.0.
         """
+        self._ensure_initialized()
         if self.onnx_session is not None:
             # Preprocessing for InsightFace ArcFace
             rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
@@ -61,6 +69,7 @@ class FaceRecognizer:
             return (raw_emb / norm).astype(np.float32)
 
         # PyTorch fallback extraction
+        import torch
         rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
         if rgb.shape[:2] != (160, 160):
             # InceptionResnetV1 expects 160x160

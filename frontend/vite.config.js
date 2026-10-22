@@ -12,6 +12,19 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
         secure: false,
+        configure: (proxy) => {
+          proxy.on('error', (err, _req, res) => {
+            if (err.code === 'ECONNREFUSED') {
+              if (res && !res.headersSent && typeof res.writeHead === 'function') {
+                res.writeHead(503, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({
+                  detail: 'Backend server is initializing. Please wait a few seconds and retry.',
+                  code: 'BACKEND_STARTING'
+                }));
+              }
+            }
+          });
+        }
       }
     }
   }

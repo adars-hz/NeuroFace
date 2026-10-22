@@ -1,9 +1,7 @@
 import cv2
-import torch
 import numpy as np
 from typing import List, Tuple, Optional
 from PIL import Image
-from facenet_pytorch import MTCNN
 
 # Canonical ArcFace reference landmarks for 112x112 aligned image
 ARCFACE_DST = np.array([
@@ -21,8 +19,17 @@ class FaceDetector:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(FaceDetector, cls).__new__(cls)
+            cls._instance._mtcnn = None
+        return cls._instance
+
+    @property
+    def mtcnn(self):
+        if self._mtcnn is None:
+            import torch
+            from facenet_pytorch import MTCNN
             device = "cuda" if torch.cuda.is_available() else "cpu"
-            cls._instance.mtcnn = MTCNN(
+            print(f"[FaceDetector] Initializing MTCNN detector on {device}...")
+            self._mtcnn = MTCNN(
                 keep_all=True,
                 select_largest=False,
                 device=device,
@@ -30,7 +37,8 @@ class FaceDetector:
                 min_face_size=40,
                 thresholds=[0.6, 0.7, 0.7]
             )
-        return cls._instance
+            print("[FaceDetector] MTCNN ready.")
+        return self._mtcnn
 
     def align_face(self, img_bgr: np.ndarray, landmarks: np.ndarray) -> np.ndarray:
         """Align face image to canonical 112x112 dimensions using 5 landmarks."""
