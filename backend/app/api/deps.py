@@ -1,8 +1,16 @@
+"""Authentication and authorisation helpers.
+
+Every protected endpoint declares which of these dependencies it needs, and
+FastAPI calls them before the endpoint runs. Each helper either returns the
+signed-in user or raises a 401/403 error.
+"""
+
 from typing import Generator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
+
 from app.core.config import settings
 from app.database.session import get_db
 from app.models.user import User, UserRole, TeacherDesignation
@@ -10,10 +18,21 @@ from app.schemas.user import TokenPayload
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
+
+def is_hod(user: User) -> bool:
+    """True when the user is a teacher carrying the HOD designation."""
+    return (
+        user.role == UserRole.TEACHER
+        and user.teacher_profile is not None
+        and user.teacher_profile.designation == TeacherDesignation.HOD
+    )
+
+
 def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
 ) -> User:
+    """Return the user that the bearer token belongs to."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -35,46 +54,41 @@ def get_current_user(
         raise HTTPException(status_code=400, detail="Inactive user account")
     return user
 
+
+def _require(condition: bool, message: str) -> None:
+    """Stop the request with a 403 and a readable reason."""
+    if not condition:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=message)
+
+
 def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin privileges required"
-        )
+    """Only a system administrator may use this endpoint."""
+    _require(current_user.role == UserRole.ADMIN, "Admin privileges required")
     return current_user
+
 
 def get_current_teacher(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.TEACHER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Teacher privileges required"
-        )
+    """Only a teacher may use this endpoint."""
+    _require(current_user.role == UserRole.TEACHER, "Teacher privileges required")
     return current_user
+
 
 def get_current_hod(current_user: User = Depends(get_current_teacher)) -> User:
-    """HOD check: User must be a Teacher with designation == HOD."""
-    if not current_user.teacher_profile or current_user.teacher_profile.designation != TeacherDesignation.HOD:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="HOD elevated designation required for this action"
-        )
+    """Only a teacher with the HOD designation may use this endpoint."""
+    _require(is_hod(current_user), "HOD elevated designation required for this action")
     return current_user
 
+
 def get_current_admin_or_hod(current_user: User = Depends(get_current_user)) -> User:
-    """Check if current user is either a system Admin or an authorized HOD."""
-    if current_user.role == UserRole.ADMIN:
-        return current_user
-    if current_user.role == UserRole.TEACHER and current_user.teacher_profile and current_user.teacher_profile.designation == TeacherDesignation.HOD:
-        return current_user
-    raise HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
-        detail="Administrative or HOD elevated authorization required"
+    """Only a system administrator or an HOD may use this endpoint."""
+    _require(
+        current_user.role == UserRole.ADMIN or is_hod(current_user),
+        "Administrative or HOD elevated authorization required"
     )
+    return current_user
+
 
 def get_current_student(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != UserRole.STUDENT:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Student privileges required"
-        )
+    """Only a student may use this endpoint."""
+    _require(current_user.role == UserRole.STUDENT, "Student privileges required")
     return current_user

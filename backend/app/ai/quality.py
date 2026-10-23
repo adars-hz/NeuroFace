@@ -2,17 +2,26 @@ import cv2
 import numpy as np
 from typing import Tuple
 
+from app.core.config import settings
+
+
 def evaluate_face_quality(
     face_img: np.ndarray,
-    min_size: int = 45,
-    blur_threshold: float = 20.0
+    min_size: int = None,
+    blur_threshold: float = None
 ) -> Tuple[bool, str]:
+    """Check a face crop before we try to recognise it.
+
+    Returns (is_good, message). The three checks are:
+      1. Size      - the crop must be at least `min_size` pixels wide and tall.
+      2. Sharpness - the Laplacian variance must be above `blur_threshold`.
+      3. Lighting  - the average brightness must be in a comfortable range.
     """
-    Evaluate face crop for quality constraints:
-    - Minimum size (w, h)
-    - Blur check via Laplacian variance
-    - Lighting / illumination distribution
-    """
+    if min_size is None:
+        min_size = settings.MIN_FACE_SIZE
+    if blur_threshold is None:
+        blur_threshold = settings.BLUR_THRESHOLD
+
     h, w = face_img.shape[:2]
 
     # 1. Size check

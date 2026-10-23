@@ -29,6 +29,6 @@ def log_audit_event(
         ip_address=ip_address
     )
     db.add(log_entry)
-    db.commit()
+    db.flush()
     db.refresh(log_entry)
     return log_entry

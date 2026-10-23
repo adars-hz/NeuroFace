@@ -230,7 +230,7 @@ The exact thresholds and fine values can be configured according to institutiona
 ### Medical Waiver
 
 Authorized HOD users can approve medical waivers for eligible cases.
-
+ 
 The effective attendance calculation can account for approved waived classes while preserving the original attendance records for audit purposes.
 
 ---

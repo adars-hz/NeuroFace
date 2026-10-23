@@ -1,86 +1,124 @@
 import os
 import cv2
 import numpy as np
-import torch
 from typing import List, Tuple, Optional, Dict
+
+from app.ai.errors import AIModelUnavailableError
 from app.core.config import settings
 
+
 class FaceRecognizer:
-    """ArcFace 512-D Embedding Extractor & Cosine Matcher."""
-    _instance = None
+    """Turns a face picture into a 512-D vector and matches it against students.
 
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(FaceRecognizer, cls).__new__(cls)
-            cls._instance._init_model()
-        return cls._instance
+    Two backends are supported, tried in this order:
+      1. An ONNX ArcFace model (fastest) at `app/ai/models/w600k_r50.onnx`.
+      2. A PyTorch InceptionResnetV1 fallback from `facenet-pytorch`.
 
-    def _init_model(self):
+    The model loads lazily so importing this module is fast and never fails.
+    """
+
+    def __init__(self):
         self.onnx_session = None
-        self.torch_fallback = None
-        onnx_path = os.path.join(settings.AI_MODELS_DIR, "w600k_r50.onnx")
+        self.torch_model = None
+        self.load_error = None
 
+    # -- model loading -------------------------------------------------
+
+    def _ensure_model(self):
+        """Load the embedding model the first time an embedding is needed."""
+        if self.onnx_session is not None or self.torch_model is not None:
+            return
+        if self.load_error:
+            raise AIModelUnavailableError(self.load_error)
+
+        onnx_path = os.path.join(settings.AI_MODELS_DIR, "w600k_r50.onnx")
         if os.path.exists(onnx_path):
             try:
                 import onnxruntime as ort
                 providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
                 self.onnx_session = ort.InferenceSession(onnx_path, providers=providers)
-                print(f"[ArcFace] Initialized ONNX session using providers: {self.onnx_session.get_providers()}")
                 return
-            except Exception as e:
-                print(f"[ArcFace] Could not load ONNX model ({e}), falling back to Torch InceptionResnetV1.")
+            except Exception as exc:
+                print(f"[ArcFace] Could not load ONNX model ({exc}), using PyTorch fallback.")
 
-        # Robust built-in fallback: InceptionResnetV1 (512-D normalized embeddings)
-        from facenet_pytorch import InceptionResnetV1
+        try:
+            import torch
+            from facenet_pytorch import InceptionResnetV1
+        except ImportError as exc:
+            self.load_error = (
+                "The face recognition model is unavailable because neither an "
+                "ArcFace ONNX model nor the 'facenet-pytorch' package could be "
+                f"loaded ({exc}). Install it with: pip install facenet-pytorch"
+            )
+            raise AIModelUnavailableError(self.load_error)
+
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.torch_fallback = InceptionResnetV1(pretrained='vggface2').eval().to(device)
-        print(f"[ArcFace] Initialized 512-D PyTorch embedding model on {device}")
+        self.torch_model = InceptionResnetV1(pretrained='vggface2').eval().to(device)
+
+    @property
+    def is_available(self) -> bool:
+        """True when an embedding model is loaded or can be loaded."""
+        return self.onnx_session is not None or self.torch_model is not None
+
+    # -- embeddings ----------------------------------------------------
 
     def extract_embedding(self, aligned_bgr: np.ndarray) -> np.ndarray:
-        """
-        Extract normalized 512-dimensional face embedding.
-        Input: Aligned 112x112 BGR or RGB face crop.
-        Output: 512-D float32 numpy array with L2 norm = 1.0.
-        """
-        if self.onnx_session is not None:
-            # Preprocessing for InsightFace ArcFace
-            rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
-            if rgb.shape[:2] != (112, 112):
-                rgb = cv2.resize(rgb, (112, 112))
-            blob = cv2.dnn.blobFromImage(
-                rgb,
-                scalefactor=1.0 / 127.5,
-                size=(112, 112),
-                mean=(127.5, 127.5, 127.5),
-                swapRB=False
-            )
-            input_name = self.onnx_session.get_inputs()[0].name
-            output_name = self.onnx_session.get_outputs()[0].name
-            raw_emb = self.onnx_session.run([output_name], {input_name: blob})[0][0]
-            norm = np.linalg.norm(raw_emb)
-            return (raw_emb / norm).astype(np.float32)
+        """Return the 512-D face embedding of an aligned face crop.
 
-        # PyTorch fallback extraction
+        The returned vector is L2-normalised, so its length is always 1.0.
+        """
+        self._ensure_model()
+
+        if self.onnx_session is not None:
+            return self._extract_with_onnx(aligned_bgr)
+        return self._extract_with_torch(aligned_bgr)
+
+    def _extract_with_onnx(self, aligned_bgr: np.ndarray) -> np.ndarray:
+        """Embed a face using the ONNX ArcFace model."""
+        rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
+        if rgb.shape[:2] != (112, 112):
+            rgb = cv2.resize(rgb, (112, 112))
+        blob = cv2.dnn.blobFromImage(
+            rgb,
+            scalefactor=1.0 / 127.5,
+            size=(112, 112),
+            mean=(127.5, 127.5, 127.5),
+            swapRB=False
+        )
+        input_name = self.onnx_session.get_inputs()[0].name
+        output_name = self.onnx_session.get_outputs()[0].name
+        raw_emb = self.onnx_session.run([output_name], {input_name: blob})[0][0]
+        return self._normalize(raw_emb)
+
+    def _extract_with_torch(self, aligned_bgr: np.ndarray) -> np.ndarray:
+        """Embed a face using the PyTorch InceptionResnetV1 fallback."""
+        import torch
+
         rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
         if rgb.shape[:2] != (160, 160):
-            # InceptionResnetV1 expects 160x160
-            resized = cv2.resize(rgb, (160, 160))
-        else:
-            resized = rgb
+            rgb = cv2.resize(rgb, (160, 160))
 
-        tensor = torch.from_numpy(resized).permute(2, 0, 1).unsqueeze(0).float()
+        tensor = torch.from_numpy(rgb).permute(2, 0, 1).unsqueeze(0).float()
         tensor = (tensor - 127.5) / 128.0
-        device = next(self.torch_fallback.parameters()).device
-        tensor = tensor.to(device)
+        tensor = tensor.to(next(self.torch_model.parameters()).device)
 
         with torch.no_grad():
-            emb = self.torch_fallback(tensor).cpu().numpy()[0]
-        norm = np.linalg.norm(emb)
-        return (emb / norm).astype(np.float32)
+            emb = self.torch_model(tensor).cpu().numpy()[0]
+        return self._normalize(emb)
+
+    @staticmethod
+    def _normalize(vector: np.ndarray) -> np.ndarray:
+        """Scale a vector to unit length so cosine similarity is a plain dot product."""
+        norm = np.linalg.norm(vector)
+        if norm == 0:
+            return vector.astype(np.float32)
+        return (vector / norm).astype(np.float32)
+
+    # -- matching ------------------------------------------------------
 
     @staticmethod
     def compute_similarity(embedding1: np.ndarray, embedding2: np.ndarray) -> float:
-        """Calculate cosine similarity between two unit-normalized vectors."""
+        """Cosine similarity between two vectors (1.0 = identical)."""
         dot = np.dot(embedding1, embedding2)
         norm1 = np.linalg.norm(embedding1)
         norm2 = np.linalg.norm(embedding2)
@@ -94,9 +132,10 @@ class FaceRecognizer:
         registered_students: List[Dict[str, any]],
         threshold: Optional[float] = None
     ) -> Tuple[Optional[int], float, str]:
-        """
-        Match a query embedding against a list of registered student embeddings.
-        Returns: (student_id or None, best_score, status: 'MATCHED' | 'UNKNOWN')
+        """Find the registered student that best matches a face.
+
+        `registered_students` is a list of {"student_id": int, "embedding": array}.
+        Returns (student_id or None, best_score, "MATCHED" or "UNKNOWN").
         """
         thresh = threshold if threshold is not None else settings.SIMILARITY_THRESHOLD
         best_score = -1.0
@@ -110,7 +149,8 @@ class FaceRecognizer:
 
         if best_score >= thresh and best_student_id is not None:
             return best_student_id, best_score, "MATCHED"
-        else:
-            return None, max(0.0, best_score), "UNKNOWN"
+        return None, max(0.0, best_score), "UNKNOWN"
 
+
+# One shared recognizer for the whole application.
 face_recognizer = FaceRecognizer()

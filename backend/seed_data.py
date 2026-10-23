@@ -1,9 +1,19 @@
+"""Fill the database with the NeuroFace demo data.
+
+Run it with:  python seed_data.py
+
+The same `seed()` function is used by the test suite, so the tests always run
+against exactly the data a fresh install would have.
+"""
+
 import os
 import sys
 from datetime import datetime, date, time, timedelta, timezone
 
-# Add backend directory to sys.path
+# Make sure the backend folder is on the import path.
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from sqlalchemy.orm import Session
 
 from app.database.session import SessionLocal, engine
 from app.database.base import Base
@@ -11,20 +21,17 @@ from app.core.security import get_password_hash
 from app.models.user import User, Teacher, Student, UserRole, TeacherDesignation
 from app.models.academic import Department, Class, Subject, TeacherSubjectClassAssignment, AttendanceSlot
 from app.models.attendance import AttendanceSession, AttendanceRecord, AttendanceSessionStatus, AttendanceStatus, VerificationMethod
-from app.models.leave import FineRule, LeaveApplication, LeaveStatus
+from app.models.leave import FineRule
 
-def seed():
-    print("[Seed] Synchronizing database tables...")
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+# Passwords used by the demo accounts.
+ADMIN_PASSWORD = "AdminPassword123!"
+HOD_PASSWORD = "HodPassword123!"
+TEACHER_PASSWORD = "TeacherPassword123!"
+STUDENT_PASSWORD = "StudentPassword123!"
 
-    # Check if already seeded
-    if db.query(User).filter(User.username == "admin").first():
-        print("[Seed] Database already seeded with admin account. Skipping.")
-        db.close()
-        return
 
-    print("[Seed] Creating Institutional Rules...")
+def seed(db: Session) -> None:
+    """Create departments, users, classes and demo attendance in one go."""
     fine_rule = FineRule(
         min_eligible_pct=85.0,
         condonation_min_pct=75.0,
@@ -33,7 +40,7 @@ def seed():
     )
     db.add(fine_rule)
 
-    print("[Seed] Creating Academic Entities...")
+    # -- Departments, classes and subjects ----------------------------
     dept_mca = Department(code="MCA", name="Master of Computer Applications")
     db.add(dept_mca)
     db.flush()
@@ -50,7 +57,7 @@ def seed():
     db.add_all([sub_ml, sub_cloud, sub_web, sub_py])
     db.flush()
 
-    print("[Seed] Creating Timetable Slots...")
+    # -- Timetable slots ----------------------------------------------
     slot1 = AttendanceSlot(name="Slot 1 (09:00 - 10:00)", start_time=time(9, 0), end_time=time(10, 0))
     slot2 = AttendanceSlot(name="Slot 2 (10:00 - 11:00)", start_time=time(10, 0), end_time=time(11, 0))
     slot3 = AttendanceSlot(name="Slot 3 (11:15 - 12:15)", start_time=time(11, 15), end_time=time(12, 15))
@@ -58,92 +65,84 @@ def seed():
     db.add_all([slot1, slot2, slot3, slot4])
     db.flush()
 
-    print("[Seed] Creating Admin User...")
+    # -- Users ---------------------------------------------------------
     admin_user = User(
         username="admin",
         email="admin@neuroface.edu",
-        password_hash=get_password_hash("AdminPassword123!"),
+        password_hash=get_password_hash(ADMIN_PASSWORD),
         role=UserRole.ADMIN,
         is_active=True
     )
     db.add(admin_user)
     db.flush()
 
-    print("[Seed] Creating Faculty & HOD...")
-    # 1. HOD Account (Teacher with HOD designation)
-    u_hod = User(
+    hod_user = User(
         username="hod_mca",
         email="hod.mca@neuroface.edu",
-        password_hash=get_password_hash("HodPassword123!"),
+        password_hash=get_password_hash(HOD_PASSWORD),
         role=UserRole.TEACHER,
         is_active=True
     )
-    db.add(u_hod)
+    db.add(hod_user)
     db.flush()
-    t_hod = Teacher(
-        user_id=u_hod.id,
+    teacher_hod = Teacher(
+        user_id=hod_user.id,
         teacher_code="T001",
         full_name="Dr. K. R. Ramanathan",
         department_id=dept_mca.id,
         designation=TeacherDesignation.HOD,
         phone="+91 98470 11223"
     )
-    db.add(t_hod)
+    db.add(teacher_hod)
 
-    # 2. Faculty Rahul Verma
-    u_rahul = User(
+    rahul_user = User(
         username="prof_rahul",
         email="rahul.faculty@neuroface.edu",
-        password_hash=get_password_hash("TeacherPassword123!"),
+        password_hash=get_password_hash(TEACHER_PASSWORD),
         role=UserRole.TEACHER,
         is_active=True
     )
-    db.add(u_rahul)
+    db.add(rahul_user)
     db.flush()
-    t_rahul = Teacher(
-        user_id=u_rahul.id,
+    teacher_rahul = Teacher(
+        user_id=rahul_user.id,
         teacher_code="T002",
         full_name="Prof. Rahul Verma",
         department_id=dept_mca.id,
         designation=TeacherDesignation.ASSOCIATE_PROFESSOR,
         phone="+91 98470 22334"
     )
-    db.add(t_rahul)
+    db.add(teacher_rahul)
 
-    # 3. Faculty Sarah Thomas
-    u_sarah = User(
+    sarah_user = User(
         username="prof_sarah",
         email="sarah.faculty@neuroface.edu",
-        password_hash=get_password_hash("TeacherPassword123!"),
+        password_hash=get_password_hash(TEACHER_PASSWORD),
         role=UserRole.TEACHER,
         is_active=True
     )
-    db.add(u_sarah)
+    db.add(sarah_user)
     db.flush()
-    t_sarah = Teacher(
-        user_id=u_sarah.id,
+    teacher_sarah = Teacher(
+        user_id=sarah_user.id,
         teacher_code="T003",
         full_name="Prof. Sarah Thomas",
         department_id=dept_mca.id,
         designation=TeacherDesignation.ASSISTANT_PROFESSOR,
         phone="+91 98470 33445"
     )
-    db.add(t_sarah)
+    db.add(teacher_sarah)
     db.flush()
 
-    print("[Seed] Creating Teacher Subject Assignments...")
-    # Rahul -> Machine Learning in MCA S3
-    asg_ml = TeacherSubjectClassAssignment(teacher_id=t_rahul.id, subject_id=sub_ml.id, class_id=cls_mca_s3.id)
-    # Sarah -> Cloud Computing in MCA S3
-    asg_cloud = TeacherSubjectClassAssignment(teacher_id=t_sarah.id, subject_id=sub_cloud.id, class_id=cls_mca_s3.id)
-    # HOD Ramanathan -> Advanced Web Tech in MCA S3
-    asg_web = TeacherSubjectClassAssignment(teacher_id=t_hod.id, subject_id=sub_web.id, class_id=cls_mca_s3.id)
-    # Rahul -> Python in MCA S1
-    asg_py = TeacherSubjectClassAssignment(teacher_id=t_rahul.id, subject_id=sub_py.id, class_id=cls_mca_s1.id)
+    # -- Which teacher teaches what ------------------------------------
+    asg_ml = TeacherSubjectClassAssignment(teacher_id=teacher_rahul.id, subject_id=sub_ml.id, class_id=cls_mca_s3.id)
+    asg_cloud = TeacherSubjectClassAssignment(teacher_id=teacher_sarah.id, subject_id=sub_cloud.id, class_id=cls_mca_s3.id)
+    asg_web = TeacherSubjectClassAssignment(teacher_id=teacher_hod.id, subject_id=sub_web.id, class_id=cls_mca_s3.id)
+    asg_py = TeacherSubjectClassAssignment(teacher_id=teacher_rahul.id, subject_id=sub_py.id, class_id=cls_mca_s1.id)
     db.add_all([asg_ml, asg_cloud, asg_web, asg_py])
     db.flush()
 
-    print("[Seed] Creating Students in MCA S3...")
+    # -- Students -------------------------------------------------------
     students_data = [
         ("student_arun", "arun@neuroface.edu", "Arun Kumar", "MCA2024001", cls_mca_s3.id),
         ("student_priya", "priya@neuroface.edu", "Priya Nair", "MCA2024002", cls_mca_s3.id),
@@ -151,73 +150,79 @@ def seed():
         ("student_ananya", "ananya@neuroface.edu", "Ananya Das", "MCA2024004", cls_mca_s3.id),
     ]
 
-    created_students = []
-    for uname, uemail, fname, reg, cid in students_data:
-        u = User(
-            username=uname,
-            email=uemail,
-            password_hash=get_password_hash("StudentPassword123!"),
+    students = []
+    for username, email, full_name, register_number, class_id in students_data:
+        user = User(
+            username=username,
+            email=email,
+            password_hash=get_password_hash(STUDENT_PASSWORD),
             role=UserRole.STUDENT,
             is_active=True
         )
-        db.add(u)
+        db.add(user)
         db.flush()
-        stu = Student(
-            user_id=u.id,
-            register_number=reg,
-            full_name=fname,
+        student = Student(
+            user_id=user.id,
+            register_number=register_number,
+            full_name=full_name,
             department_id=dept_mca.id,
-            class_id=cid,
+            class_id=class_id,
             face_registered=False,
             phone="+91 99950 12345"
         )
-        db.add(stu)
+        db.add(student)
         db.flush()
-        created_students.append(stu)
+        students.append(student)
 
-    print("[Seed] Creating Initial Demonstration Sessions & Attendance Records...")
-    # Create 10 completed lecture sessions for Machine Learning to demonstrate calculation logic
+    # -- 10 finished Machine Learning lectures with known attendance ----
+    # Arun 9/10 (90% - eligible), Priya 8/10 (80% - fine),
+    # Rohit 7/10 (70% - detained), Ananya 10/10 (100% - eligible).
+    present_counts = [9, 8, 7, 10]
     base_date = date.today() - timedelta(days=15)
-    for i in range(10):
-        s_date = base_date + timedelta(days=i)
-        start_dt = datetime.combine(s_date, time(9, 0), tzinfo=timezone.utc)
-        end_dt = datetime.combine(s_date, time(10, 0), tzinfo=timezone.utc)
-        sess = AttendanceSession(
+
+    for lecture in range(10):
+        lecture_date = base_date + timedelta(days=lecture)
+        session = AttendanceSession(
             assignment_id=asg_ml.id,
-            teacher_id=t_rahul.id,
+            teacher_id=teacher_rahul.id,
             slot_id=slot1.id,
-            session_date=s_date,
-            start_time=start_dt,
-            end_time=end_dt,
+            session_date=lecture_date,
+            start_time=datetime.combine(lecture_date, time(9, 0), tzinfo=timezone.utc),
+            end_time=datetime.combine(lecture_date, time(10, 0), tzinfo=timezone.utc),
             status=AttendanceSessionStatus.COMPLETED
         )
-        db.add(sess)
+        db.add(session)
         db.flush()
 
-        # Arun: 9 out of 10 (90% - Direct Eligible)
-        # Priya: 8 out of 10 (80% - Condonation with Fine)
-        # Rohit: 7 out of 10 (70% - Detained)
-        # Ananya: 10 out of 10 (100% - Direct Eligible)
-        if i < 9:
-            db.add(AttendanceRecord(session_id=sess.id, student_id=created_students[0].id, status=AttendanceStatus.PRESENT, verification_method=VerificationMethod.FACE_RECOGNITION))
-        else:
-            db.add(AttendanceRecord(session_id=sess.id, student_id=created_students[0].id, status=AttendanceStatus.ABSENT, verification_method=VerificationMethod.FACE_RECOGNITION))
-
-        if i < 8:
-            db.add(AttendanceRecord(session_id=sess.id, student_id=created_students[1].id, status=AttendanceStatus.PRESENT, verification_method=VerificationMethod.FACE_RECOGNITION))
-        else:
-            db.add(AttendanceRecord(session_id=sess.id, student_id=created_students[1].id, status=AttendanceStatus.ABSENT, verification_method=VerificationMethod.FACE_RECOGNITION))
-
-        if i < 7:
-            db.add(AttendanceRecord(session_id=sess.id, student_id=created_students[2].id, status=AttendanceStatus.PRESENT, verification_method=VerificationMethod.FACE_RECOGNITION))
-        else:
-            db.add(AttendanceRecord(session_id=sess.id, student_id=created_students[2].id, status=AttendanceStatus.ABSENT, verification_method=VerificationMethod.FACE_RECOGNITION))
-
-        db.add(AttendanceRecord(session_id=sess.id, student_id=created_students[3].id, status=AttendanceStatus.PRESENT, verification_method=VerificationMethod.FACE_RECOGNITION))
+        for index, student in enumerate(students):
+            was_present = lecture < present_counts[index]
+            db.add(AttendanceRecord(
+                session_id=session.id,
+                student_id=student.id,
+                status=AttendanceStatus.PRESENT if was_present else AttendanceStatus.ABSENT,
+                verification_method=VerificationMethod.FACE_RECOGNITION
+            ))
 
     db.commit()
-    db.close()
-    print("[Seed] Successfully completed database seeding!")
+
+
+def main() -> None:
+    """Create the tables (if needed) and fill them with the demo data."""
+    print("[Seed] Synchronizing database tables...")
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        if db.query(User).filter(User.username == "admin").first():
+            print("[Seed] Database already seeded with admin account. Skipping.")
+            return
+
+        print("[Seed] Creating demo data...")
+        seed(db)
+        print("[Seed] Successfully completed database seeding!")
+    finally:
+        db.close()
+
 
 if __name__ == "__main__":
-    seed()
+    main()
