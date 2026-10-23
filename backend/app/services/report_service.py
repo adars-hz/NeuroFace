@@ -16,7 +16,7 @@ def generate_student_report_csv(report: StudentAttendanceReport) -> str:
     writer.writerow([])
     writer.writerow([
         "Subject Code", "Subject Name", "Total Classes", "Present",
-        "Absent", "Waived", "Raw %", "Effective %", "Eligibility", "Fine Status"
+        "Absent", "Waived", "Raw %", "Effective %"
     ])
 
     for s in report.subjects:
@@ -28,9 +28,7 @@ def generate_student_report_csv(report: StudentAttendanceReport) -> str:
             s.absent_classes,
             s.waived_classes,
             f"{s.raw_attendance_pct}%",
-            f"{s.effective_attendance_pct}%",
-            "ELIGIBLE" if s.is_eligible else ("CONDONATION" if s.requires_fine else "DETAINED"),
-            f"FINE: Rs.{s.fine_amount} ({s.fine_status})" if s.requires_fine else s.fine_status
+            f"{s.effective_attendance_pct}%"
         ])
 
     return output.getvalue()
@@ -73,34 +71,30 @@ def generate_student_report_pdf(report: StudentAttendanceReport) -> bytes:
         spaceAfter=6
     )
 
-    elements.append(Paragraph("<b>NeuroFace: Attendance & Eligibility Report</b>", title_style))
+    elements.append(Paragraph("<b>NeuroFace: Student Attendance Report</b>", title_style))
     elements.append(Paragraph(f"<b>Student:</b> {report.student_name} ({report.register_number})", sub_style))
     elements.append(Paragraph(f"<b>Class:</b> {report.class_name} | <b>Department:</b> {report.department_name}", sub_style))
-    elements.append(Paragraph(f"<b>Overall Attendance:</b> {report.overall_attendance_pct}% | <b>Status:</b> {'ALL ELIGIBLE' if report.all_subjects_eligible else 'ACTION REQUIRED'}", sub_style))
+    elements.append(Paragraph(f"<b>Overall Attendance:</b> {report.overall_attendance_pct}%", sub_style))
     elements.append(Spacer(1, 14))
 
     table_data = [
-        ["Code", "Subject", "Total", "Present", "Absent", "Waived", "Att %", "Eligibility", "Fine"]
+        ["Code", "Subject", "Total Classes", "Present", "Absent", "Waived", "Attendance %"]
     ]
 
     for s in report.subjects:
-        elig_text = "Eligible" if s.is_eligible else ("Condonation" if s.requires_fine else "Detained")
-        fine_text = f"Rs.{s.fine_amount}" if s.requires_fine else "-"
         table_data.append([
             s.subject_code,
-            s.subject_name[:18],
+            s.subject_name[:24],
             str(s.total_classes),
             str(s.present_classes),
             str(s.absent_classes),
             str(s.waived_classes),
-            f"{s.effective_attendance_pct}%",
-            elig_text,
-            fine_text
+            f"{s.effective_attendance_pct}%"
         ])
 
-    t = Table(table_data, colWidths=[55, 130, 40, 45, 45, 45, 55, 65, 55])
+    t = Table(table_data, colWidths=[65, 175, 60, 60, 60, 60, 90])
     t.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1e40af")),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0d9488")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),

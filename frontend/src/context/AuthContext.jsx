@@ -20,7 +20,11 @@ export const AuthProvider = ({ children }) => {
           setUser(updatedUser);
           localStorage.setItem('neuroface_user', JSON.stringify(updatedUser));
         } catch (err) {
-          logout();
+          // Only clear session if token is explicitly invalid (401).
+          // Do NOT log out if backend is still starting up or temporarily offline.
+          if (err.response && err.response.status === 401) {
+            logout();
+          }
         }
       }
       setLoading(false);

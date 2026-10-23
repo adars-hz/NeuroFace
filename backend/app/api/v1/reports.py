@@ -107,12 +107,7 @@ def get_class_subject_report(
             fine_status=stat.fine_status
         ))
         total_pct += stat.effective_attendance_pct
-        if stat.is_eligible:
-            eligible_count += 1
-        elif stat.requires_fine:
-            condonation_count += 1
-        else:
-            detained_count += 1
+        eligible_count += 1
 
     avg_pct = round(total_pct / len(students), 2) if students else 100.0
 

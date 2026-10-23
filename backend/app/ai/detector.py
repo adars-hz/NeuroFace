@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
-from typing import List
+from typing import List, Tuple, Optional
+from PIL import Image
 
 from app.ai.errors import AIModelUnavailableError
 
@@ -22,16 +23,20 @@ class FaceDetector:
     fast and never fails. When the package is missing the detector reports
     itself as unavailable and raises a friendly error when used.
     """
+    _instance = None
 
-    def __init__(self):
-        self.mtcnn = None
-        self.load_error = None
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(FaceDetector, cls).__new__(cls)
+            cls._instance._mtcnn = None
+            cls._instance.load_error = None
+        return cls._instance
 
     # -- model loading -------------------------------------------------
 
     def _ensure_model(self):
         """Load MTCNN the first time it is needed."""
-        if self.mtcnn is not None:
+        if self._mtcnn is not None:
             return
         if self.load_error:
             raise AIModelUnavailableError(self.load_error)
@@ -48,7 +53,7 @@ class FaceDetector:
             raise AIModelUnavailableError(self.load_error)
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.mtcnn = MTCNN(
+        self._mtcnn = MTCNN(
             keep_all=True,
             select_largest=False,
             device=device,
@@ -58,9 +63,18 @@ class FaceDetector:
         )
 
     @property
+    def mtcnn(self):
+        self._ensure_model()
+        return self._mtcnn
+
+    @property
     def is_available(self) -> bool:
         """True when the detector can actually run."""
-        return self.mtcnn is not None
+        try:
+            self._ensure_model()
+            return True
+        except Exception:
+            return False
 
     # -- detection -----------------------------------------------------
 
@@ -80,8 +94,6 @@ class FaceDetector:
         'box' (x1, y1, x2, y2), 'score', 'landmarks', 'crop' and 'aligned'.
         """
         self._ensure_model()
-
-        from PIL import Image
 
         h, w = img_bgr.shape[:2]
         img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)

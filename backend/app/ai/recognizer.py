@@ -16,11 +16,19 @@ class FaceRecognizer:
 
     The model loads lazily so importing this module is fast and never fails.
     """
+    _instance = None
 
-    def __init__(self):
-        self.onnx_session = None
-        self.torch_model = None
-        self.load_error = None
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(FaceRecognizer, cls).__new__(cls)
+            cls._instance.onnx_session = None
+            cls._instance.torch_model = None
+            cls._instance.load_error = None
+        return cls._instance
+
+    def _ensure_initialized(self):
+        """Backwards compatibility alias for _ensure_model."""
+        self._ensure_model()
 
     # -- model loading -------------------------------------------------
 
@@ -68,7 +76,6 @@ class FaceRecognizer:
         The returned vector is L2-normalised, so its length is always 1.0.
         """
         self._ensure_model()
-
         if self.onnx_session is not None:
             return self._extract_with_onnx(aligned_bgr)
         return self._extract_with_torch(aligned_bgr)
@@ -141,11 +148,11 @@ class FaceRecognizer:
         best_score = -1.0
         best_student_id = None
 
-        for student in registered_students:
-            score = self.compute_similarity(query_embedding, student["embedding"])
+        for record in registered_students:
+            score = self.compute_similarity(query_embedding, record["embedding"])
             if score > best_score:
                 best_score = score
-                best_student_id = student["student_id"]
+                best_student_id = record["student_id"]
 
         if best_score >= thresh and best_student_id is not None:
             return best_student_id, best_score, "MATCHED"

@@ -21,8 +21,7 @@ The system also provides:
 * Multi-student classroom detection
 * Duplicate attendance prevention
 * Attendance percentage calculation
-* 85% examination eligibility tracking
-* Attendance condonation and fine management
+* Real-time subject-wise tracking
 * HOD medical waiver management
 * OCR-based leave and medical document processing
 * PDF and CSV attendance reports
@@ -215,17 +214,7 @@ This helps prevent the same individual from registering their face under multipl
 
 # 📊 Attendance Management
 
-NeuroFace automatically calculates subject-wise attendance percentages.
-
-The system supports three attendance categories:
-
-| Attendance          | Status             |
-| ------------------- | ------------------ |
-| **85% or above**    | Eligible           |
-| **75% – below 85%** | Condonation / Fine |
-| **Below 75%**       | Detained           |
-
-The exact thresholds and fine values can be configured according to institutional requirements.
+NeuroFace automatically calculates subject-wise attendance percentages from biometric classroom sessions and approved medical waivers. The system provides real-time attendance reporting, session breakdowns, and downloadable PDF and CSV reports.
 
 ### Medical Waiver
 

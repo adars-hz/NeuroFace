@@ -61,7 +61,7 @@ function App() {
             <Route path="teachers" element={<TeachersPage />} />
             <Route path="students" element={<StudentsPage />} />
             <Route path="assignments" element={<AssignmentsPage />} />
-            <Route path="fine-rules" element={<FineRulesPage />} />
+            <Route path="fine-rules" element={<Navigate to="/admin" replace />} />
             <Route path="database" element={<DatabaseExplorerPage />} />
             <Route path="audit-logs" element={<AuditLogsPage />} />
             <Route path="approvals" element={<ApprovalsPage />} />

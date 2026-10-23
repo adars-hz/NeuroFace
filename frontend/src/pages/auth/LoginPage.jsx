@@ -21,7 +21,13 @@ const LoginPage = () => {
       else if (user.role === 'TEACHER') navigate('/teacher');
       else if (user.role === 'STUDENT') navigate('/student');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Invalid login credentials. Please try again.');
+      if (err.response?.data?.detail) {
+        setError(err.response.data.detail);
+      } else if (!err.response || err.response?.status === 503) {
+        setError('Backend server is starting up. Please wait a few seconds and try again.');
+      } else {
+        setError('Invalid login credentials. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -54,7 +60,7 @@ const LoginPage = () => {
             Next-Generation Facial Biometric Attendance for Higher Education.
           </h2>
           <p className="text-slate-400 text-sm md:text-base leading-relaxed max-w-lg">
-            High-speed multi-student classroom detection, real-time unknown face rejection, OCR leave document analysis, and configurable 85% eligibility fine calculation.
+            High-speed multi-student classroom detection, real-time unknown face rejection, OCR leave document analysis, and comprehensive attendance analytics.
           </p>
 
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-800/80">
