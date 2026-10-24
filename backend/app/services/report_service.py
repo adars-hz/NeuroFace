@@ -1,10 +1,5 @@
 import io
 import csv
-from typing import List
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib import colors
 from app.schemas.reports import StudentAttendanceReport
 
 def generate_student_report_csv(report: StudentAttendanceReport) -> str:
@@ -39,7 +34,22 @@ def generate_student_report_csv(report: StudentAttendanceReport) -> str:
     return output.getvalue()
 
 def generate_student_report_pdf(report: StudentAttendanceReport) -> bytes:
-    """Generate a clean, professional PDF attendance summary."""
+    """Generate a clean, professional PDF attendance summary.
+
+    `reportlab` is an optional dependency, so it is imported here instead of
+    at the top of the file. That way the CSV export keeps working on
+    machines where reportlab was never installed.
+    """
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+    except ImportError as exc:
+        raise RuntimeError(
+            "PDF export needs the 'reportlab' package. Install it with: pip install reportlab"
+        ) from exc
+
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     elements = []

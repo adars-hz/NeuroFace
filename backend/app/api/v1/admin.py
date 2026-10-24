@@ -60,29 +60,29 @@ def create_department(dept_in: DepartmentCreate, db: Session = Depends(get_db), 
     if existing:
         raise HTTPException(status_code=400, detail="Department code already exists")
 
-    if current_user.role != UserRole.ADMIN:
-        req = HODApprovalRequest(
-            request_type=ApprovalRequestType.CREATE_DEPARTMENT,
-            status=ApprovalStatus.PENDING,
-            requested_by_id=current_user.id,
-            title=f"Create Department: {dept_in.name} ({dept_in.code.upper()})",
-            payload_json=json.dumps(dept_in.model_dump())
-        )
-        db.add(req)
+    if current_user.role == UserRole.ADMIN:
+        dept = Department(code=dept_in.code.upper(), name=dept_in.name)
+        db.add(dept)
         db.commit()
-        db.refresh(req)
-        return {
-            "status": "PENDING_APPROVAL",
-            "message": f"Creation of department '{dept_in.name}' submitted for Admin approval.",
-            "request_id": req.id
-        }
+        db.refresh(dept)
+        log_audit_event(db, "CREATE_DEPARTMENT", "Department", current_user.id, dept.id, {"code": dept.code})
+        return dept
 
-    dept = Department(code=dept_in.code.upper(), name=dept_in.name)
-    db.add(dept)
+    req = HODApprovalRequest(
+        request_type=ApprovalRequestType.CREATE_DEPARTMENT,
+        status=ApprovalStatus.PENDING,
+        requested_by_id=current_user.id,
+        title=f"Create Department: {dept_in.name} ({dept_in.code.upper()})",
+        payload_json=json.dumps(dept_in.model_dump())
+    )
+    db.add(req)
     db.commit()
-    db.refresh(dept)
-    log_audit_event(db, "CREATE_DEPARTMENT", "Department", current_user.id, dept.id, {"code": dept.code})
-    return dept
+    db.refresh(req)
+    return {
+        "status": "PENDING_APPROVAL",
+        "message": f"Creation of department '{dept_in.name}' submitted for Admin approval.",
+        "request_id": req.id
+    }
 
 # ----------------- CLASSES -----------------
 @router.get("/classes", response_model=List[ClassOut])

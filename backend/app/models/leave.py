@@ -38,7 +38,8 @@ class LeaveDocument(Base):
     __tablename__ = "leave_documents"
 
     id = Column(Integer, primary_key=True, index=True)
-    leave_id = Column(Integer, ForeignKey("leave_applications.id", ondelete="CASCADE"), nullable=False)
+    # Nullable: a document can be uploaded before its leave application is created.
+    leave_id = Column(Integer, ForeignKey("leave_applications.id", ondelete="CASCADE"), nullable=True)
     file_path = Column(String(255), nullable=False)
     file_name = Column(String(100), nullable=False)
     mime_type = Column(String(50), nullable=False)

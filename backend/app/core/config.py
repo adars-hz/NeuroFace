@@ -1,11 +1,22 @@
 import os
 from typing import List
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
+# The backend folder (this file lives in app/core/).
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 class Settings(BaseSettings):
+    """Every setting of the NeuroFace backend in one place.
+
+    Each value can be changed with an environment variable of the same name
+    (see the `.env` file) so nothing has to be edited in the code.
+    """
+
     PROJECT_NAME: str = "NeuroFace: AI Attendance Management System"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = "neuroface-super-secret-production-key-change-in-env-2026"
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "fallback-dev-key-for-local-only-123")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
@@ -25,10 +36,9 @@ class Settings(BaseSettings):
     TEMPORAL_CONFIRM_FRAMES: int = 2       # Frames out of 3 needed for confirmation
 
     # Uploads & Storage
-    BASE_DIR: str = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     UPLOAD_DIR: str = os.path.join(BASE_DIR, "uploads")
-    LEAVE_UPLOAD_DIR: str = os.path.join(UPLOAD_DIR, "leaves")
-    FACE_SAMPLES_DIR: str = os.path.join(UPLOAD_DIR, "faces")
+    LEAVE_UPLOAD_DIR: str = ""
+    FACE_SAMPLES_DIR: str = ""
     AI_MODELS_DIR: str = os.path.join(BASE_DIR, "app", "ai", "models")
 
     # CORS
@@ -37,17 +47,24 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "*"
     ]
 
     class Config:
         env_file = ".env"
         case_sensitive = True
 
+    @model_validator(mode="after")
+    def derive_folders(self):
+        """Work out the folders that live inside UPLOAD_DIR."""
+        if not self.LEAVE_UPLOAD_DIR:
+            self.LEAVE_UPLOAD_DIR = os.path.join(self.UPLOAD_DIR, "leaves")
+        if not self.FACE_SAMPLES_DIR:
+            self.FACE_SAMPLES_DIR = os.path.join(self.UPLOAD_DIR, "faces")
+        return self
+
+
 settings = Settings()
 
-# Ensure directories exist
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-os.makedirs(settings.LEAVE_UPLOAD_DIR, exist_ok=True)
-os.makedirs(settings.FACE_SAMPLES_DIR, exist_ok=True)
-os.makedirs(settings.AI_MODELS_DIR, exist_ok=True)
+# Make sure every folder the app writes to exists.
+for _folder in (settings.UPLOAD_DIR, settings.LEAVE_UPLOAD_DIR, settings.FACE_SAMPLES_DIR, settings.AI_MODELS_DIR):
+    os.makedirs(_folder, exist_ok=True)

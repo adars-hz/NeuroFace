@@ -47,7 +47,7 @@ async def upload_leave_document(
 
     # Create temporary standalone document record (will be linked to LeaveApplication on submission)
     doc = LeaveDocument(
-        leave_id=0,  # placeholder before application creation
+        leave_id=None,  # linked to a leave application later, if one is submitted
         file_path=saved_path,
         file_name=file.filename,
         mime_type=file.content_type,
@@ -106,10 +106,19 @@ def apply_leave(
 
     # Link uploaded document if present
     if req.document_id:
-        doc = db.query(LeaveDocument).filter(LeaveDocument.id == req.document_id).first()
+        # Use a row-level lock to prevent race conditions if multiple requests
+        # try to link the same document.
+        doc = db.query(LeaveDocument).filter(
+            LeaveDocument.id == req.document_id,
+            LeaveDocument.leave_id == None
+        ).with_for_update().first()
+
         if doc:
             doc.leave_id = app.id
             db.commit()
+        else:
+            # Document is either missing or already linked to another application.
+            pass
 
     log_audit_event(
         db,

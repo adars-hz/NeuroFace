@@ -20,3 +20,4 @@ torchvision>=0.15.0
 facenet-pytorch>=2.5.3
 pytesseract>=0.3.10
 onnxruntime>=1.16.0
+gradio>=4.0.0
