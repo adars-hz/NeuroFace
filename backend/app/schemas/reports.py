@@ -27,6 +27,13 @@ class StudentAttendanceReport(BaseModel):
     all_subjects_eligible: bool
     subjects: List[SubjectAttendanceStat]
 
+class StudentReportCandidate(BaseModel):
+    id: int
+    register_number: str
+    full_name: str
+    class_name: Optional[str]
+    department_name: Optional[str]
+
 class ClassAttendanceRow(BaseModel):
     student_id: int
     register_number: str

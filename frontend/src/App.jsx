@@ -23,6 +23,7 @@ import TeacherLeavesPage from './pages/teacher/TeacherLeavesPage';
 import HODOversightPage from './pages/teacher/HODOversightPage';
 import MedicalWaiverPage from './pages/teacher/MedicalWaiverPage';
 import HODMyRequestsPage from './pages/teacher/HODMyRequestsPage';
+import StudentReportsPage from './pages/teacher/StudentReportsPage';
 
 import StudentDashboard from './pages/student/StudentDashboard';
 import FaceRegistrationPage from './pages/student/FaceRegistrationPage';
@@ -80,6 +81,7 @@ function App() {
             <Route path="start-session" element={<StartSessionPage />} />
             <Route path="live-session/:sessionId" element={<LiveAttendancePage />} />
             <Route path="leaves" element={<TeacherLeavesPage />} />
+            <Route path="student-reports" element={<StudentReportsPage />} />
 
             {/* HOD-Only Elevated Routes */}
             <Route

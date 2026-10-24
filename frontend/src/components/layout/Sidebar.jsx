@@ -99,6 +99,10 @@ const Sidebar = () => {
                 <FileText className="w-4 h-4" />
                 <span>Review Leaves & OCR</span>
               </NavLink>
+              <NavLink to="/teacher/student-reports" className={linkClass}>
+                <FileCheck2 className="w-4 h-4" />
+                <span>Student Reports</span>
+              </NavLink>
             </nav>
 
             {/* HOD CONDITIONAL ELEVATION SECTION */}

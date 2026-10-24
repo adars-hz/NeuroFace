@@ -9,6 +9,22 @@ const api = axios.create({
   },
 });
 
+export const downloadStudentReportPdf = async (studentId) => {
+  const response = await api.get(`/reports/student/${studentId}/export-pdf`, {
+    responseType: 'blob',
+  });
+  const url = window.URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = url;
+  const disposition = response.headers['content-disposition'] || '';
+  const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+  link.download = filename || `attendance_${studentId}.pdf`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+};
+
 // Attach JWT token from localStorage to every outbound request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('neuroface_token');

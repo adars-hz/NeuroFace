@@ -1,15 +1,90 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from app.database.session import get_db
-from app.models.user import User, UserRole, Student
+from app.models.user import User, UserRole, Student, TeacherDesignation
 from app.models.academic import Class, Subject, TeacherSubjectClassAssignment
 from app.models.attendance import AttendanceSession, AttendanceRecord, AttendanceStatus
 from app.api.deps import get_current_user
 from app.services.attendance_calculator import calculate_student_full_report, calculate_student_subject_attendance, get_active_fine_rule
 from app.services.report_service import generate_student_report_csv, generate_student_report_pdf
-from app.schemas.reports import StudentAttendanceReport, ClassSubjectReport, ClassAttendanceRow
+from app.schemas.reports import StudentAttendanceReport, StudentReportCandidate, ClassSubjectReport, ClassAttendanceRow
 
 router = APIRouter()
+
+
+def get_report_students_query(db: Session, current_user: User):
+    """Return students the signed-in staff member is permitted to report on."""
+    query = db.query(Student)
+
+    if current_user.role == UserRole.ADMIN:
+        return query
+
+    if current_user.role != UserRole.TEACHER or not current_user.teacher_profile:
+        raise HTTPException(status_code=403, detail="Staff privileges required")
+
+    teacher = current_user.teacher_profile
+    if teacher.designation == TeacherDesignation.HOD:
+        if not teacher.department_id:
+            return query.filter(Student.id == -1)
+        return query.filter(Student.department_id == teacher.department_id)
+
+    assigned_class_ids = db.query(TeacherSubjectClassAssignment.class_id).filter(
+        TeacherSubjectClassAssignment.teacher_id == teacher.id
+    )
+    return query.filter(Student.class_id.in_(assigned_class_ids))
+
+
+def require_student_report_access(db: Session, current_user: User, student: Student) -> None:
+    if current_user.role == UserRole.STUDENT:
+        if not current_user.student_profile or current_user.student_profile.id != student.id:
+            raise HTTPException(status_code=403, detail="Unauthorized to view other students' reports.")
+        return
+
+    if current_user.role == UserRole.ADMIN:
+        return
+
+    if current_user.role != UserRole.TEACHER or not current_user.teacher_profile:
+        raise HTTPException(status_code=403, detail="Staff privileges required")
+
+    teacher = current_user.teacher_profile
+    if teacher.designation == TeacherDesignation.HOD:
+        if student.department_id == teacher.department_id and teacher.department_id is not None:
+            return
+        raise HTTPException(status_code=403, detail="Student is outside your department.")
+
+    assignment = db.query(TeacherSubjectClassAssignment.id).filter(
+        TeacherSubjectClassAssignment.teacher_id == teacher.id,
+        TeacherSubjectClassAssignment.class_id == student.class_id
+    ).first()
+    if not assignment:
+        raise HTTPException(status_code=403, detail="Student is outside your assigned classes.")
+
+
+def get_student_or_404(db: Session, student_id: int) -> Student:
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return student
+
+
+@router.get("/students", response_model=list[StudentReportCandidate])
+def get_report_students(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """List students the current administrator, teacher, or HOD can report on."""
+    students = get_report_students_query(db, current_user).order_by(Student.full_name).all()
+    return [
+        StudentReportCandidate(
+            id=student.id,
+            register_number=student.register_number,
+            full_name=student.full_name,
+            class_name=student.class_assigned.name if student.class_assigned else None,
+            department_name=student.department.name if student.department else None
+        )
+        for student in students
+    ]
+
 
 @router.get("/student/{student_id}", response_model=StudentAttendanceReport)
 def get_student_report(
@@ -18,9 +93,8 @@ def get_student_report(
     current_user: User = Depends(get_current_user)
 ):
     """Retrieve full subject-wise attendance, eligibility, and fine status for a student."""
-    # Enforce role boundary: student can only view their own
-    if current_user.role == UserRole.STUDENT and current_user.student_profile.id != student_id:
-        raise HTTPException(status_code=403, detail="Unauthorized to view other students' reports.")
+    student = get_student_or_404(db, student_id)
+    require_student_report_access(db, current_user, student)
 
     return calculate_student_full_report(db, student_id)
 
@@ -31,8 +105,8 @@ def export_student_csv(
     current_user: User = Depends(get_current_user)
 ):
     """Download attendance report as a CSV file."""
-    if current_user.role == UserRole.STUDENT and current_user.student_profile.id != student_id:
-        raise HTTPException(status_code=403, detail="Unauthorized.")
+    student = get_student_or_404(db, student_id)
+    require_student_report_access(db, current_user, student)
 
     report = calculate_student_full_report(db, student_id)
     csv_data = generate_student_report_csv(report)
@@ -49,8 +123,8 @@ def export_student_pdf(
     current_user: User = Depends(get_current_user)
 ):
     """Download attendance report as a styled PDF document."""
-    if current_user.role == UserRole.STUDENT and current_user.student_profile.id != student_id:
-        raise HTTPException(status_code=403, detail="Unauthorized.")
+    student = get_student_or_404(db, student_id)
+    require_student_report_access(db, current_user, student)
 
     report = calculate_student_full_report(db, student_id)
     pdf_bytes = generate_student_report_pdf(report)

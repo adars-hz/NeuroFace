@@ -87,6 +87,7 @@ Teachers can:
 * Use the classroom camera for facial recognition
 * Review attendance records
 * View student attendance statistics
+* Generate and download individual student attendance reports as PDF
 * Process submitted leave applications
 
 ### 🎓 HOD
@@ -97,6 +98,7 @@ The Head of Department is modeled as a specialized Teacher account with addition
 * Medical waiver approval
 * Attendance overrides
 * Student eligibility review
+* Generate and download individual student attendance reports as PDF for the department
 
 ### 👨‍🎓 Student
 
@@ -256,6 +258,10 @@ The system provides attendance reporting capabilities with support for:
 * Attendance history
 * PDF reports
 * CSV exports
+
+Teachers can generate reports for students in their assigned classes. HODs can
+generate reports for students in their department. Open **Student Reports** in
+the faculty portal, select a student, and choose **Download PDF**.
 
 ---
 

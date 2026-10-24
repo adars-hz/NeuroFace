@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
+import api, { downloadStudentReportPdf } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import {
   CheckCircle2, AlertTriangle, FileDown, Download,
@@ -25,9 +25,14 @@ const MyAttendancePage = () => {
     fetchAttendance();
   }, []);
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = async () => {
     if (!report) return;
-    window.open(`http://127.0.0.1:8000/api/v1/reports/student/${report.student_id}/export-pdf`, '_blank');
+    try {
+      await downloadStudentReportPdf(report.student_id);
+    } catch (err) {
+      console.error(err);
+      window.alert('Unable to download the attendance PDF. Please try again.');
+    }
   };
 
   const handleDownloadCSV = () => {

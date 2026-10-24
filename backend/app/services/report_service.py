@@ -1,5 +1,6 @@
 import io
 import csv
+from xml.sax.saxutils import escape
 from app.schemas.reports import StudentAttendanceReport
 
 def generate_student_report_csv(report: StudentAttendanceReport) -> str:
@@ -41,7 +42,7 @@ def generate_student_report_pdf(report: StudentAttendanceReport) -> bytes:
     machines where reportlab was never installed.
     """
     try:
-        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.pagesizes import landscape, letter
         from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib import colors
@@ -51,7 +52,7 @@ def generate_student_report_pdf(report: StudentAttendanceReport) -> bytes:
         ) from exc
 
     buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter, rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), rightMargin=36, leftMargin=36, topMargin=36, bottomMargin=36)
     elements = []
     styles = getSampleStyleSheet()
 
@@ -72,8 +73,8 @@ def generate_student_report_pdf(report: StudentAttendanceReport) -> bytes:
     )
 
     elements.append(Paragraph("<b>NeuroFace: Student Attendance Report</b>", title_style))
-    elements.append(Paragraph(f"<b>Student:</b> {report.student_name} ({report.register_number})", sub_style))
-    elements.append(Paragraph(f"<b>Class:</b> {report.class_name} | <b>Department:</b> {report.department_name}", sub_style))
+    elements.append(Paragraph(f"<b>Student:</b> {escape(report.student_name)} ({escape(report.register_number)})", sub_style))
+    elements.append(Paragraph(f"<b>Class:</b> {escape(report.class_name)} | <b>Department:</b> {escape(report.department_name)}", sub_style))
     elements.append(Paragraph(f"<b>Overall Attendance:</b> {report.overall_attendance_pct}%", sub_style))
     elements.append(Spacer(1, 14))
 
@@ -83,8 +84,8 @@ def generate_student_report_pdf(report: StudentAttendanceReport) -> bytes:
 
     for s in report.subjects:
         table_data.append([
-            s.subject_code,
-            s.subject_name[:24],
+            Paragraph(escape(s.subject_code), sub_style),
+            Paragraph(escape(s.subject_name), sub_style),
             str(s.total_classes),
             str(s.present_classes),
             str(s.absent_classes),
@@ -92,11 +93,12 @@ def generate_student_report_pdf(report: StudentAttendanceReport) -> bytes:
             f"{s.effective_attendance_pct}%"
         ])
 
-    t = Table(table_data, colWidths=[65, 175, 60, 60, 60, 60, 90])
+    t = Table(table_data, colWidths=[70, 250, 75, 75, 75, 75, 100], repeatRows=1)
     t.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#0d9488")),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 9),
         ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
