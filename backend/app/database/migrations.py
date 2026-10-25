@@ -64,6 +64,26 @@ def migrate_leave_documents_leave_id(engine: Engine) -> bool:
     return True
 
 
+def migrate_classes_add_advisor(engine: Engine) -> bool:
+    """Add class_advisor_id column to classes table if missing."""
+    if not _is_sqlite(engine):
+        return False
+
+    with engine.connect() as conn:
+        rows = conn.execute(text("PRAGMA table_info(classes)")).fetchall()
+        col_names = [row[1] for row in rows]
+        if "class_advisor_id" in col_names:
+            return False  # Already exists
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "ALTER TABLE classes ADD COLUMN class_advisor_id INTEGER "
+            "REFERENCES teachers(id) ON DELETE SET NULL"
+        ))
+    return True
+
+
 def run_migrations(engine: Engine) -> None:
     """Run every migration. Safe to call on every startup."""
     migrate_leave_documents_leave_id(engine)
+    migrate_classes_add_advisor(engine)

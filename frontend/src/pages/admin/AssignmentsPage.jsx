@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { CheckSquare, Plus, Trash2, Shield, BookOpen } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { CheckSquare, Plus, Trash2, Shield, BookOpen, Award } from 'lucide-react';
 
 const AssignmentsPage = () => {
+  const { user } = useAuth();
+  const isAdvisor = user?.is_class_advisor && !user?.is_hod && user?.role !== 'ADMIN';
+  const advisedClasses = user?.advised_class_names || [];
+  const advisedClassIds = user?.advised_class_ids || [];
+
   const [assignments, setAssignments] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [formData, setFormData] = useState({ teacher_id: '', subject_id: '', class_id: '' });
+  const [formData, setFormData] = useState({
+    teacher_id: '',
+    subject_id: '',
+    class_id: ''
+  });
   const [loading, setLoading] = useState(true);
 
   const loadData = async () => {
@@ -21,7 +31,15 @@ const AssignmentsPage = () => {
       setAssignments(aRes.data);
       setTeachers(tRes.data);
       setSubjects(sRes.data);
-      setClasses(cRes.data);
+
+      const availableClasses = isAdvisor
+        ? cRes.data.filter((c) => advisedClassIds.includes(c.id))
+        : cRes.data;
+      setClasses(availableClasses);
+
+      if (isAdvisor && advisedClassIds.length > 0 && !formData.class_id) {
+        setFormData((prev) => ({ ...prev, class_id: String(advisedClassIds[0]) }));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -31,13 +49,17 @@ const AssignmentsPage = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user]);
 
   const handleAssign = async (e) => {
     e.preventDefault();
     try {
       await api.post('/admin/assignments', formData);
-      setFormData({ teacher_id: '', subject_id: '', class_id: '' });
+      setFormData({
+        teacher_id: '',
+        subject_id: '',
+        class_id: isAdvisor && advisedClassIds.length > 0 ? String(advisedClassIds[0]) : ''
+      });
       loadData();
     } catch (err) {
       alert(err.response?.data?.detail || err.message);
@@ -57,9 +79,28 @@ const AssignmentsPage = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 font-heading">Teacher Subject & Class Assignments</h1>
-        <p className="text-slate-600 text-sm">Strictly configure which courses faculty members can conduct attendance sessions for</p>
+        <div className="flex items-center space-x-2">
+          {isAdvisor && <Award className="w-6 h-6 text-teal-600" />}
+          <h1 className="text-2xl font-bold text-slate-900 font-heading">
+            {isAdvisor ? `Class Advisor: Assign Teachers & Slots` : `Teacher Subject & Class Assignments`}
+          </h1>
+        </div>
+        <p className="text-slate-600 text-sm mt-1">
+          {isAdvisor
+            ? `Assign faculty members to subject courses and timetable slots for your advised class (${advisedClasses.join(', ') || 'Class'}).`
+            : `Strictly configure which courses faculty members can conduct attendance sessions for.`}
+        </p>
       </div>
+
+      {isAdvisor && (
+        <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex items-center space-x-3 text-sm text-teal-900">
+          <Award className="w-5 h-5 text-teal-600 flex-shrink-0" />
+          <div>
+            <span className="font-bold">Privileged Teacher Access:</span> As Class Advisor for{' '}
+            <span className="font-semibold underline">{advisedClasses.join(', ')}</span>, you have elevated authority to assign teachers for each subject and slot without requiring approval.
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Assignments Table */}

@@ -224,14 +224,22 @@ const TeachersPage = () => {
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  {t.is_hod ? (
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                      <Award className="w-3.5 h-3.5 mr-1 text-amber-600" />
-                      Head of Dept (HOD)
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-600 font-medium">Faculty</span>
-                  )}
+                  <div className="flex flex-col gap-1 items-start">
+                    {t.is_hod ? (
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                        <Award className="w-3.5 h-3.5 mr-1 text-amber-600" />
+                        Head of Dept (HOD)
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-600 font-medium">Faculty</span>
+                    )}
+                    {t.is_class_advisor && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200" title={t.advised_classes?.join(', ')}>
+                        <Award className="w-3 h-3 mr-1 text-teal-600" />
+                        Advisor: {t.advised_classes?.[0]}
+                      </span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end space-x-1.5">

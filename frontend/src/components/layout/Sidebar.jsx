@@ -5,13 +5,15 @@ import api from '../../services/api';
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, Clock,
   Camera, FileText, CheckSquare, Settings, Activity,
-  FileCheck2, ShieldAlert, Sliders, History, Database
+  FileCheck2, ShieldAlert, Sliders, History, Database, Award
 } from 'lucide-react';
 
 const Sidebar = () => {
   const { user } = useAuth();
   const role = user?.role;
   const isHod = user?.is_hod;
+  const isAdvisor = user?.is_class_advisor;
+  const advisedClasses = user?.advised_class_names || [];
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -104,6 +106,31 @@ const Sidebar = () => {
                 <span>Student Reports</span>
               </NavLink>
             </nav>
+
+            {/* CLASS ADVISOR ELEVATED TOOLS */}
+            {isAdvisor && !isHod && (
+              <div className="mt-6 pt-5 border-t border-slate-200">
+                <div className="px-3 flex items-center justify-between text-xs font-bold text-teal-800 uppercase tracking-wider mb-2">
+                  <div className="flex items-center space-x-1.5">
+                    <Award className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Class Advisor</span>
+                  </div>
+                  <span className="text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-md font-semibold truncate max-w-[100px]" title={advisedClasses.join(', ')}>
+                    {advisedClasses[0] || 'Advisor'}
+                  </span>
+                </div>
+                <nav className="space-y-1">
+                  <NavLink to="/teacher/assignments" className={linkClass}>
+                    <CheckSquare className="w-4 h-4 text-teal-600" />
+                    <span>Assign Teachers & Slots</span>
+                  </NavLink>
+                  <NavLink to="/teacher/student-reports" className={linkClass}>
+                    <FileCheck2 className="w-4 h-4 text-teal-600" />
+                    <span>Download Class Reports</span>
+                  </NavLink>
+                </nav>
+              </div>
+            )}
 
             {/* HOD CONDITIONAL ELEVATION SECTION */}
             {isHod && (

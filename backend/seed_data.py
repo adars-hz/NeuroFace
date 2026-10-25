@@ -134,6 +134,11 @@ def seed(db: Session) -> None:
     db.add(teacher_sarah)
     db.flush()
 
+    # Designate Prof. Rahul Verma as the Class Advisor for MCA S3
+    cls_mca_s3.class_advisor_id = teacher_rahul.id
+    db.flush()
+
+
     # -- Which teacher teaches what ------------------------------------
     asg_ml = TeacherSubjectClassAssignment(teacher_id=teacher_rahul.id, subject_id=sub_ml.id, class_id=cls_mca_s3.id)
     asg_cloud = TeacherSubjectClassAssignment(teacher_id=teacher_sarah.id, subject_id=sub_cloud.id, class_id=cls_mca_s3.id)

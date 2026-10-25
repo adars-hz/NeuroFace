@@ -13,13 +13,16 @@ from app.schemas.user import (
     TeacherUpdate, StudentUpdate
 )
 from app.schemas.academic import (
-    DepartmentCreate, DepartmentOut, ClassCreate, ClassOut,
+    DepartmentCreate, DepartmentOut, ClassCreate, ClassOut, ClassAdvisorAssign,
     SubjectCreate, SubjectOut, AssignmentCreate, AssignmentOut, SlotCreate, SlotOut
 )
 from app.schemas.leave import FineRuleUpdate, FineRuleOut
 import json
 from app.models.approval import HODApprovalRequest, ApprovalRequestType, ApprovalStatus
-from app.api.deps import get_current_admin, get_current_admin_or_hod
+from app.api.deps import (
+    get_current_admin, get_current_admin_or_hod, get_current_admin_or_hod_or_advisor,
+    is_advisor_for_class, is_hod, is_class_advisor
+)
 from app.core.audit import log_audit_event
 from app.services.attendance_calculator import get_active_fine_rule
 
@@ -86,7 +89,7 @@ def create_department(dept_in: DepartmentCreate, db: Session = Depends(get_db), 
 
 # ----------------- CLASSES -----------------
 @router.get("/classes", response_model=List[ClassOut])
-def get_classes(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
+def get_classes(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod_or_advisor)):
     classes = db.query(Class).all()
     results = []
     for c in classes:
@@ -98,9 +101,67 @@ def get_classes(db: Session = Depends(get_db), current_user: User = Depends(get_
             department_name=c.department.name if c.department else None,
             semester=c.semester,
             academic_year=c.academic_year,
-            student_count=student_count
+            student_count=student_count,
+            class_advisor_id=c.class_advisor_id,
+            class_advisor_name=c.advisor.full_name if c.advisor else None,
+            class_advisor_code=c.advisor.teacher_code if c.advisor else None
         ))
     return results
+
+@router.put("/classes/{class_id}/advisor", response_model=ClassOut)
+def assign_class_advisor(
+    class_id: int,
+    assign_in: ClassAdvisorAssign,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_or_hod)
+):
+    """
+    Assign or unassign a faculty member as the Class Advisor for a class.
+    Permitted for: Admin (any class) and HOD (classes within their department).
+    """
+    cls = db.query(Class).filter(Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    if current_user.role != UserRole.ADMIN:
+        hod_teacher = current_user.teacher_profile
+        if not hod_teacher or hod_teacher.department_id != cls.department_id:
+            raise HTTPException(status_code=403, detail="HOD can only assign advisors to classes within their department")
+
+    teacher = None
+    if assign_in.teacher_id is not None:
+        teacher = db.query(Teacher).filter(Teacher.id == assign_in.teacher_id).first()
+        if not teacher:
+            raise HTTPException(status_code=404, detail="Teacher not found")
+        if current_user.role != UserRole.ADMIN and teacher.department_id != cls.department_id:
+            raise HTTPException(status_code=400, detail="Cannot assign a teacher from outside the department as class advisor")
+
+    old_advisor_id = cls.class_advisor_id
+    cls.class_advisor_id = teacher.id if teacher else None
+    db.commit()
+    db.refresh(cls)
+
+    action_msg = f"Assigned {teacher.full_name} ({teacher.teacher_code}) as Class Advisor" if teacher else "Removed Class Advisor"
+    log_audit_event(db, "ASSIGN_CLASS_ADVISOR", "Class", current_user.id, cls.id, {
+        "class_name": cls.name,
+        "old_advisor_id": old_advisor_id,
+        "new_advisor_id": cls.class_advisor_id,
+        "action": action_msg
+    })
+
+    student_count = db.query(Student).filter(Student.class_id == cls.id).count()
+    return ClassOut(
+        id=cls.id,
+        name=cls.name,
+        department_id=cls.department_id,
+        department_name=cls.department.name if cls.department else None,
+        semester=cls.semester,
+        academic_year=cls.academic_year,
+        student_count=student_count,
+        class_advisor_id=cls.class_advisor_id,
+        class_advisor_name=cls.advisor.full_name if cls.advisor else None,
+        class_advisor_code=cls.advisor.teacher_code if cls.advisor else None
+    )
 
 @router.post("/classes")
 def create_class(cls_in: ClassCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
@@ -204,10 +265,11 @@ def create_subject(sub_in: SubjectCreate, db: Session = Depends(get_db), current
 
 # ----------------- TEACHERS -----------------
 @router.get("/teachers", response_model=List[TeacherOut])
-def get_teachers(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
+def get_teachers(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod_or_advisor)):
     teachers = db.query(Teacher).all()
     results = []
     for t in teachers:
+        advised = [c.name for c in t.advised_classes] if t.advised_classes else []
         results.append(TeacherOut(
             id=t.id,
             user_id=t.user_id,
@@ -217,6 +279,8 @@ def get_teachers(db: Session = Depends(get_db), current_user: User = Depends(get
             department_name=t.department.name if t.department else None,
             designation=t.designation,
             is_hod=t.is_hod,
+            is_class_advisor=len(advised) > 0,
+            advised_classes=advised,
             email=t.user.email,
             phone=t.phone,
             is_active=t.user.is_active
@@ -701,8 +765,16 @@ def delete_student(
 
 # ----------------- ASSIGNMENTS -----------------
 @router.get("/assignments", response_model=List[AssignmentOut])
-def get_assignments(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
-    assignments = db.query(TeacherSubjectClassAssignment).all()
+def get_assignments(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod_or_advisor)):
+    if current_user.role == UserRole.ADMIN or is_hod(current_user):
+        assignments = db.query(TeacherSubjectClassAssignment).all()
+    else:
+        # Class Advisor: return assignments for their advised classes
+        advised_ids = [c.id for c in current_user.teacher_profile.advised_classes] if current_user.teacher_profile else []
+        assignments = db.query(TeacherSubjectClassAssignment).filter(
+            TeacherSubjectClassAssignment.class_id.in_(advised_ids)
+        ).all()
+
     results = []
     for a in assignments:
         results.append(AssignmentOut(
@@ -719,7 +791,7 @@ def get_assignments(db: Session = Depends(get_db), current_user: User = Depends(
     return results
 
 @router.post("/assignments")
-def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
+def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod_or_advisor)):
     existing = db.query(TeacherSubjectClassAssignment).filter(
         TeacherSubjectClassAssignment.teacher_id == a_in.teacher_id,
         TeacherSubjectClassAssignment.subject_id == a_in.subject_id,
@@ -727,6 +799,35 @@ def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), cur
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Assignment already exists")
+
+    is_advisor = is_advisor_for_class(current_user, a_in.class_id)
+    if current_user.role != UserRole.ADMIN and not is_hod(current_user) and not is_advisor:
+        raise HTTPException(status_code=403, detail="You can only assign teachers to your advised class")
+
+    # If the user is the Class Advisor for this class, they have direct authority to assign
+    if is_advisor:
+        a = TeacherSubjectClassAssignment(
+            teacher_id=a_in.teacher_id,
+            subject_id=a_in.subject_id,
+            class_id=a_in.class_id
+        )
+        db.add(a)
+        db.commit()
+        db.refresh(a)
+        log_audit_event(db, "CLASS_ADVISOR_ASSIGN_TEACHER", "Assignment", current_user.id, a.id, {
+            "teacher_id": a.teacher_id, "subject_id": a.subject_id, "class_id": a.class_id
+        })
+        return AssignmentOut(
+            id=a.id,
+            teacher_id=a.teacher_id,
+            teacher_name=a.teacher.full_name,
+            teacher_code=a.teacher.teacher_code,
+            subject_id=a.subject_id,
+            subject_name=a.subject.name,
+            subject_code=a.subject.code,
+            class_id=a.class_id,
+            class_name=a.class_assigned.name
+        )
 
     if current_user.role != UserRole.ADMIN:
         teacher = db.query(Teacher).filter(Teacher.id == a_in.teacher_id).first()
@@ -778,36 +879,40 @@ def create_assignment(a_in: AssignmentCreate, db: Session = Depends(get_db), cur
     )
 
 @router.delete("/assignments/{id}")
-def delete_assignment(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
+def delete_assignment(id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod_or_advisor)):
     a = db.query(TeacherSubjectClassAssignment).filter(TeacherSubjectClassAssignment.id == id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Assignment not found")
 
-    if current_user.role != UserRole.ADMIN:
-        req = HODApprovalRequest(
-            request_type=ApprovalRequestType.DELETE_ASSIGNMENT,
-            status=ApprovalStatus.PENDING,
-            requested_by_id=current_user.id,
-            title=f"Revoke Assignment: {a.teacher.full_name} from {a.subject.name} ({a.class_assigned.name})",
-            payload_json=json.dumps({"assignment_id": id})
-        )
-        db.add(req)
-        db.commit()
-        db.refresh(req)
-        return {
-            "status": "PENDING_APPROVAL",
-            "message": "Revocation request submitted for Admin approval.",
-            "request_id": req.id
-        }
+    is_advisor = is_advisor_for_class(current_user, a.class_id)
+    if current_user.role != UserRole.ADMIN and not is_hod(current_user) and not is_advisor:
+        raise HTTPException(status_code=403, detail="You can only revoke assignments for your advised class")
 
-    db.delete(a)
+    if is_advisor or current_user.role == UserRole.ADMIN:
+        db.delete(a)
+        db.commit()
+        log_audit_event(db, "DELETE_ASSIGNMENT", "Assignment", current_user.id, id)
+        return {"message": "Assignment deleted successfully", "id": id}
+
+    req = HODApprovalRequest(
+        request_type=ApprovalRequestType.DELETE_ASSIGNMENT,
+        status=ApprovalStatus.PENDING,
+        requested_by_id=current_user.id,
+        title=f"Revoke Assignment: {a.teacher.full_name} from {a.subject.name} ({a.class_assigned.name})",
+        payload_json=json.dumps({"assignment_id": id})
+    )
+    db.add(req)
     db.commit()
-    log_audit_event(db, "DELETE_ASSIGNMENT", "Assignment", current_user.id, id)
-    return {"message": "Assignment deleted successfully"}
+    db.refresh(req)
+    return {
+        "status": "PENDING_APPROVAL",
+        "message": "Revocation request submitted for Admin approval.",
+        "request_id": req.id
+    }
 
 # ----------------- SLOTS -----------------
 @router.get("/slots", response_model=List[SlotOut])
-def get_slots(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def get_slots(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod_or_advisor)):
     slots = db.query(AttendanceSlot).all()
     return [
         SlotOut(

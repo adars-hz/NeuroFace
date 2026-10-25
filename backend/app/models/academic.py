@@ -23,6 +23,7 @@ class Class(Base):
     department_id = Column(Integer, ForeignKey("departments.id", ondelete="CASCADE"), nullable=False)
     semester = Column(Integer, nullable=False)
     academic_year = Column(String(20), nullable=False)  # e.g., "2025-2026"
+    class_advisor_id = Column(Integer, ForeignKey("teachers.id", ondelete="SET NULL"), nullable=True)
 
     __table_args__ = (
         UniqueConstraint("name", "department_id", "academic_year", name="uq_class_dept_year"),
@@ -31,6 +32,7 @@ class Class(Base):
     department = relationship("Department", back_populates="classes")
     students = relationship("Student", back_populates="class_assigned")
     assignments = relationship("TeacherSubjectClassAssignment", back_populates="class_assigned", cascade="all, delete-orphan")
+    advisor = relationship("Teacher", back_populates="advised_classes", foreign_keys=[class_advisor_id])
 
 class Subject(Base):
     __tablename__ = "subjects"

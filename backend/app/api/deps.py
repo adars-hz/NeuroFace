@@ -28,6 +28,26 @@ def is_hod(user: User) -> bool:
     )
 
 
+def is_class_advisor(user: User) -> bool:
+    """True when the user is a teacher assigned as an advisor for at least one class."""
+    return (
+        user.role == UserRole.TEACHER
+        and user.teacher_profile is not None
+        and bool(user.teacher_profile.advised_classes)
+    )
+
+
+def is_advisor_for_class(user: User, class_id: int) -> bool:
+    """True when the user is a teacher assigned as advisor for the specific class."""
+    if user.role != UserRole.TEACHER or not user.teacher_profile:
+        return False
+    try:
+        cid = int(class_id)
+    except (ValueError, TypeError):
+        return False
+    return any(c.id == cid for c in (user.teacher_profile.advised_classes or []))
+
+
 def get_current_user(
     db: Session = Depends(get_db),
     token: str = Depends(oauth2_scheme)
@@ -84,6 +104,15 @@ def get_current_admin_or_hod(current_user: User = Depends(get_current_user)) -> 
     _require(
         current_user.role == UserRole.ADMIN or is_hod(current_user),
         "Administrative or HOD elevated authorization required"
+    )
+    return current_user
+
+
+def get_current_admin_or_hod_or_advisor(current_user: User = Depends(get_current_user)) -> User:
+    """Only a system administrator, HOD, or Class Advisor may use this endpoint."""
+    _require(
+        current_user.role == UserRole.ADMIN or is_hod(current_user) or is_class_advisor(current_user),
+        "Administrative, HOD, or Class Advisor elevated authorization required"
     )
     return current_user
 

@@ -35,6 +35,12 @@ const Navbar = () => {
             HOD Elevated Access
           </span>
         )}
+        {user?.is_class_advisor && !user?.is_hod && (
+          <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+            <Award className="w-3.5 h-3.5 mr-1 text-teal-600" />
+            Class Advisor: {user.advised_class_names?.[0] || 'Active'}
+          </span>
+        )}
 
         <div className="flex items-center space-x-3 pl-4 border-l border-slate-200">
           <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 font-semibold">
@@ -47,7 +53,11 @@ const Navbar = () => {
             <div className="text-xs text-slate-600 flex items-center space-x-1">
               <Shield className="w-3 h-3 text-teal-600 inline" />
               <span className="font-medium">
-                {user?.role === 'TEACHER' && user?.is_hod ? 'HOD / Teacher' : user?.role}
+                {user?.role === 'TEACHER' && user?.is_hod
+                  ? 'HOD / Teacher'
+                  : user?.role === 'TEACHER' && user?.is_class_advisor
+                  ? `Class Advisor (${user.advised_class_names?.[0] || 'Active'})`
+                  : user?.role}
               </span>
             </div>
           </div>

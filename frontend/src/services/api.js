@@ -25,6 +25,11 @@ export const downloadStudentReportPdf = async (studentId) => {
   window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
 };
 
+export const assignClassAdvisor = async (classId, teacherId) => {
+  return api.put(`/admin/classes/${classId}/advisor`, { teacher_id: teacherId });
+};
+
+
 // Attach JWT token from localStorage to every outbound request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('neuroface_token');

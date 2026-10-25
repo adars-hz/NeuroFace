@@ -45,10 +45,15 @@ class Teacher(Base):
     department = relationship("Department", back_populates="teachers")
     assignments = relationship("TeacherSubjectClassAssignment", back_populates="teacher", cascade="all, delete-orphan")
     sessions = relationship("AttendanceSession", back_populates="teacher")
+    advised_classes = relationship("Class", back_populates="advisor", foreign_keys="Class.class_advisor_id")
 
     @property
     def is_hod(self) -> bool:
         return self.designation == TeacherDesignation.HOD
+
+    @property
+    def is_class_advisor(self) -> bool:
+        return len(self.advised_classes) > 0
 
 class Student(Base):
     __tablename__ = "students"

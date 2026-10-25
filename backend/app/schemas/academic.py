@@ -28,9 +28,15 @@ class ClassOut(ClassBase):
     id: int
     department_name: Optional[str] = None
     student_count: Optional[int] = 0
+    class_advisor_id: Optional[int] = None
+    class_advisor_name: Optional[str] = None
+    class_advisor_code: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+class ClassAdvisorAssign(BaseModel):
+    teacher_id: Optional[int] = None
 
 class SubjectBase(BaseModel):
     code: str

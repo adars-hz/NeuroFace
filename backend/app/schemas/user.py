@@ -10,6 +10,9 @@ class Token(BaseModel):
     email: str
     role: UserRole
     is_hod: bool
+    is_class_advisor: bool = False
+    advised_class_ids: list[int] = []
+    advised_class_names: list[str] = []
     full_name: str
     profile_id: Optional[int] = None
     department_id: Optional[int] = None
@@ -51,6 +54,8 @@ class TeacherOut(BaseModel):
     department_name: Optional[str] = None
     designation: TeacherDesignation
     is_hod: bool
+    is_class_advisor: bool = False
+    advised_classes: list[str] = []
     email: str
     phone: Optional[str]
     is_active: bool

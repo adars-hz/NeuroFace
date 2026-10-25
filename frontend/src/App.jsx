@@ -82,6 +82,7 @@ function App() {
             <Route path="live-session/:sessionId" element={<LiveAttendancePage />} />
             <Route path="leaves" element={<TeacherLeavesPage />} />
             <Route path="student-reports" element={<StudentReportsPage />} />
+            <Route path="assignments" element={<AssignmentsPage />} />
 
             {/* HOD-Only Elevated Routes */}
             <Route

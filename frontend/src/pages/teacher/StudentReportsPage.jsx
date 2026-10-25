@@ -1,8 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileDown, Search, UserRound } from 'lucide-react';
+import { FileDown, Search, UserRound, Award } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import api, { downloadStudentReportPdf } from '../../services/api';
 
 const StudentReportsPage = () => {
+  const { user } = useAuth();
   const [students, setStudents] = useState([]);
   const [query, setQuery] = useState('');
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -74,6 +76,16 @@ const StudentReportsPage = () => {
           Select a student to review attendance by subject and download an official PDF report.
         </p>
       </div>
+
+      {user?.is_class_advisor && (
+        <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex items-center space-x-3 text-sm text-teal-900">
+          <Award className="w-5 h-5 text-teal-600 flex-shrink-0" />
+          <div>
+            <span className="font-bold">Class Advisor Reports:</span> You have full reporting access for students in{' '}
+            <span className="font-semibold underline">{user?.advised_class_names?.join(', ') || 'your class'}</span>. You can review and download official PDF attendance reports.
+          </div>
+        </div>
+      )}
 
       {error && (
         <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

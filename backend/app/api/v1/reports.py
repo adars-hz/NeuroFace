@@ -31,7 +31,11 @@ def get_report_students_query(db: Session, current_user: User):
     assigned_class_ids = db.query(TeacherSubjectClassAssignment.class_id).filter(
         TeacherSubjectClassAssignment.teacher_id == teacher.id
     )
-    return query.filter(Student.class_id.in_(assigned_class_ids))
+    advised_class_ids = db.query(Class.id).filter(Class.class_advisor_id == teacher.id)
+
+    return query.filter(
+        Student.class_id.in_(assigned_class_ids) | Student.class_id.in_(advised_class_ids)
+    )
 
 
 def require_student_report_access(db: Session, current_user: User, student: Student) -> None:
@@ -51,6 +55,11 @@ def require_student_report_access(db: Session, current_user: User, student: Stud
         if student.department_id == teacher.department_id and teacher.department_id is not None:
             return
         raise HTTPException(status_code=403, detail="Student is outside your department.")
+
+    # Class Advisor has elevated privileges over their advised class
+    advised_classes = getattr(teacher, "advised_classes", None) or []
+    if student.class_id and any(c.id == student.class_id for c in advised_classes):
+        return
 
     assignment = db.query(TeacherSubjectClassAssignment.id).filter(
         TeacherSubjectClassAssignment.teacher_id == teacher.id,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../services/api';
-import { BookOpen, Layers, Clock, Plus, Building2 } from 'lucide-react';
+import api, { assignClassAdvisor } from '../../services/api';
+import { BookOpen, Layers, Clock, Plus, Building2, Award, UserCheck, X } from 'lucide-react';
 
 const AcademicSetupPage = () => {
   const [activeTab, setActiveTab] = useState('classes');
@@ -8,6 +8,7 @@ const AcademicSetupPage = () => {
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [slots, setSlots] = useState([]);
+  const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Forms
@@ -15,18 +16,25 @@ const AcademicSetupPage = () => {
   const [classForm, setClassForm] = useState({ name: '', department_id: '', semester: 1, academic_year: '2025-2026' });
   const [subForm, setSubForm] = useState({ code: '', name: '', department_id: '', semester: 1, total_credits: 4 });
 
+  // Class Advisor Modal
+  const [advisorModalClass, setAdvisorModalClass] = useState(null);
+  const [selectedAdvisorId, setSelectedAdvisorId] = useState('');
+  const [advisorSaving, setAdvisorSaving] = useState(false);
+
   const loadData = async () => {
     try {
-      const [dRes, cRes, sRes, slRes] = await Promise.all([
+      const [dRes, cRes, sRes, slRes, tRes] = await Promise.all([
         api.get('/admin/departments'),
         api.get('/admin/classes'),
         api.get('/admin/subjects'),
-        api.get('/admin/slots')
+        api.get('/admin/slots'),
+        api.get('/admin/teachers')
       ]);
       setDepartments(dRes.data);
       setClasses(cRes.data);
       setSubjects(sRes.data);
       setSlots(slRes.data);
+      setTeachers(tRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -134,6 +142,8 @@ const AcademicSetupPage = () => {
                   <th className="px-6 py-3">Department</th>
                   <th className="px-6 py-3">Semester</th>
                   <th className="px-6 py-3">Students</th>
+                  <th className="px-6 py-3">Class Advisor</th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -143,6 +153,30 @@ const AcademicSetupPage = () => {
                     <td className="px-6 py-4 text-xs text-slate-600">{c.department_name}</td>
                     <td className="px-6 py-4 text-xs font-semibold text-slate-700">Semester {c.semester}</td>
                     <td className="px-6 py-4 text-xs font-bold text-teal-600">{c.student_count} Enrolled</td>
+                    <td className="px-6 py-4">
+                      {c.class_advisor_name ? (
+                        <div className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200">
+                          <Award className="w-3.5 h-3.5 mr-1 text-teal-600" />
+                          <span>{c.class_advisor_name}</span>
+                          <span className="ml-1 text-[10px] text-teal-600 font-mono">({c.class_advisor_code})</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">No advisor assigned</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => {
+                          setAdvisorModalClass(c);
+                          setSelectedAdvisorId(c.class_advisor_id ? String(c.class_advisor_id) : '');
+                        }}
+                        className="inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors border border-slate-200"
+                        title="Designate faculty member as Class Advisor"
+                      >
+                        <UserCheck className="w-3.5 h-3.5 mr-1 text-teal-600" />
+                        {c.class_advisor_id ? 'Change' : 'Assign Advisor'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -389,6 +423,88 @@ const AcademicSetupPage = () => {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Class Advisor Assignment Modal */}
+      {advisorModalClass && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Award className="w-5 h-5 text-teal-600" />
+                <h3 className="font-bold text-slate-900 font-heading">Assign Class Advisor</h3>
+              </div>
+              <button
+                onClick={() => setAdvisorModalClass(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+                <div className="font-bold text-slate-800 text-sm">{advisorModalClass.name}</div>
+                <div className="text-slate-500 mt-0.5">{advisorModalClass.department_name} • Semester {advisorModalClass.semester}</div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                  Select Faculty Member
+                </label>
+                <select
+                  value={selectedAdvisorId}
+                  onChange={(e) => setSelectedAdvisorId(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="">-- No Advisor (Unassign) --</option>
+                  {teachers
+                    .filter((t) => !advisorModalClass.department_id || t.department_id === advisorModalClass.department_id)
+                    .map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.full_name} ({t.teacher_code}) - {t.designation.replace('_', ' ')}
+                      </option>
+                    ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-2">
+                  The designated Class Advisor can download class attendance reports and assign faculty to timetable slots.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAdvisorModalClass(null)}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={advisorSaving}
+                  onClick={async () => {
+                    setAdvisorSaving(true);
+                    try {
+                      await assignClassAdvisor(
+                        advisorModalClass.id,
+                        selectedAdvisorId ? parseInt(selectedAdvisorId) : null
+                      );
+                      setAdvisorModalClass(null);
+                      loadData();
+                    } catch (err) {
+                      alert(err.response?.data?.detail || err.message);
+                    } finally {
+                      setAdvisorSaving(false);
+                    }
+                  }}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm disabled:opacity-50"
+                >
+                  {advisorSaving ? 'Saving...' : 'Save Advisor'}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
