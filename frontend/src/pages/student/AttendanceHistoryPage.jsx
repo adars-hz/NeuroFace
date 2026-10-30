@@ -28,7 +28,8 @@ const AttendanceHistoryPage = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-[600px]">
           <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
             <tr>
               <th className="px-6 py-3.5">Session Date</th>
@@ -79,6 +80,7 @@ const AttendanceHistoryPage = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

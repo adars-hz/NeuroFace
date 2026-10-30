@@ -191,7 +191,8 @@ const TeachersPage = () => {
 
       {/* Teachers Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-left text-sm text-slate-700">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-700 min-w-[700px]">
           <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
             <tr>
               <th className="px-6 py-3.5">Faculty Member</th>
@@ -274,12 +275,13 @@ const TeachersPage = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Modal to Add Teacher */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 border border-slate-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-lg font-bold text-slate-900 font-heading">Register Faculty Member</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -288,7 +290,7 @@ const TeachersPage = () => {
             </div>
 
             <form onSubmit={handleCreate} className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
                   <input
@@ -312,7 +314,7 @@ const TeachersPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Username</label>
                   <input
@@ -335,7 +337,7 @@ const TeachersPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Department</label>
                   <select
@@ -399,7 +401,7 @@ const TeachersPage = () => {
       {/* Modal to Edit Teacher */}
       {editTeacher && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4 border border-slate-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <h3 className="text-lg font-bold text-slate-900 font-heading">Edit Faculty Details</h3>
@@ -411,7 +413,7 @@ const TeachersPage = () => {
             </div>
 
             <form onSubmit={handleUpdate} className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
                   <input
@@ -434,7 +436,7 @@ const TeachersPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Department</label>
                   <select
@@ -463,7 +465,7 @@ const TeachersPage = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Phone Number</label>
                   <input
@@ -522,7 +524,7 @@ const TeachersPage = () => {
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-rose-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-xl space-y-4 border border-rose-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start space-x-3">
               <div className="p-2.5 rounded-xl bg-rose-100 text-rose-600 flex-shrink-0">
                 <AlertTriangle className="w-5 h-5" />

@@ -80,7 +80,7 @@ const HODOversightPage = () => {
         </Link>
       </div>
 
-      <div className="p-6 bg-amber-50/60 rounded-2xl border border-amber-200/80 flex items-center justify-between">
+      <div className="p-6 bg-amber-50/60 rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-bold text-amber-900 font-heading text-sm">Need to grant medical attendance waivers?</h3>
           <p className="text-xs text-amber-800 mt-0.5">
@@ -89,7 +89,7 @@ const HODOversightPage = () => {
         </div>
         <Link
           to="/teacher/medical-waivers"
-          className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm"
+          className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors shadow-sm whitespace-nowrap text-center"
         >
           Manage Waivers &rarr;
         </Link>

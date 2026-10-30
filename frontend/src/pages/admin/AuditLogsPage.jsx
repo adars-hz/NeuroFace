@@ -28,7 +28,8 @@ const AuditLogsPage = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <table className="w-full text-left text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-[640px]">
           <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
             <tr>
               <th className="px-6 py-3.5">Timestamp</th>
@@ -62,6 +63,7 @@ const AuditLogsPage = () => {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

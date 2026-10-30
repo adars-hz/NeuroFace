@@ -41,7 +41,7 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-slate-900 text-slate-100">
       {/* Left Showcase Banner */}
-      <div className="md:w-1/2 p-8 md:p-14 flex flex-col justify-between bg-gradient-to-br from-teal-950 via-slate-900 to-slate-950 border-r border-slate-800">
+      <div className="md:w-1/2 p-6 sm:p-8 md:p-14 flex flex-col justify-between bg-gradient-to-br from-teal-950 via-slate-900 to-slate-950 border-r border-slate-800">
         <div className="flex items-center space-x-3">
           <div className="w-11 h-11 rounded-2xl bg-teal-500/20 border border-teal-500/40 flex items-center justify-center text-teal-400 shadow-lg shadow-teal-500/10">
             <Sparkles className="w-6 h-6" />
@@ -52,11 +52,11 @@ const LoginPage = () => {
           </div>
         </div>
 
-        <div className="my-12 space-y-6">
+        <div className="my-6 sm:my-8 md:my-12 space-y-4 sm:space-y-6">
           <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/10 text-teal-300 border border-teal-500/30">
             <ShieldCheck className="w-4 h-4 mr-1.5" /> MTCNN + ArcFace 512-D Architecture
           </div>
-          <h2 className="text-3xl md:text-4xl font-extrabold font-heading text-white leading-tight">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold font-heading text-white leading-tight">
             Next-Generation Facial Biometric Attendance for Higher Education.
           </h2>
           <p className="text-slate-400 text-sm md:text-base leading-relaxed max-w-lg">
@@ -81,7 +81,7 @@ const LoginPage = () => {
       </div>
 
       {/* Right Login Form */}
-      <div className="md:w-1/2 p-8 md:p-14 flex items-center justify-center bg-slate-950">
+      <div className="md:w-1/2 p-6 sm:p-8 md:p-14 flex items-center justify-center bg-slate-950">
         <div className="w-full max-w-md space-y-8">
           <div>
             <h3 className="text-2xl font-bold font-heading text-white">Sign in to your account</h3>

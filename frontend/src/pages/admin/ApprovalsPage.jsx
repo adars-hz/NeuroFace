@@ -173,7 +173,7 @@ const ApprovalsPage = () => {
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center p-1 rounded-2xl bg-slate-100 border border-slate-200">
+        <div className="flex items-center p-1 rounded-2xl bg-slate-100 border border-slate-200 overflow-x-auto max-w-full">
           <button
             onClick={() => handleTabChange('hod')}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 ${
@@ -230,7 +230,7 @@ const ApprovalsPage = () => {
             </div>
 
             {/* Filter Pills */}
-            <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl overflow-x-auto max-w-full">
               {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((f) => (
                 <button
                   key={f}
@@ -261,7 +261,8 @@ const ApprovalsPage = () => {
                 </p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm text-slate-700">
+              <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-700 min-w-[700px]">
                 <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Request Type & Title</th>
@@ -341,6 +342,7 @@ const ApprovalsPage = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -357,7 +359,7 @@ const ApprovalsPage = () => {
             </div>
 
             {/* Filter Pills */}
-            <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl">
+            <div className="flex items-center space-x-1.5 bg-slate-100 p-1 rounded-xl overflow-x-auto max-w-full">
               {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((f) => (
                 <button
                   key={f}
@@ -388,7 +390,8 @@ const ApprovalsPage = () => {
                 </p>
               </div>
             ) : (
-              <table className="w-full text-left text-sm text-slate-700">
+              <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm text-slate-700 min-w-[700px]">
                 <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-3.5">Student Details</th>
@@ -490,6 +493,7 @@ const ApprovalsPage = () => {
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>
@@ -498,7 +502,7 @@ const ApprovalsPage = () => {
       {/* Review Confirmation Modal */}
       {reviewModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl space-y-4 border border-slate-200">
+          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="text-lg font-bold text-slate-900 font-heading flex items-center space-x-2">
                 {reviewModal.action === 'approve' ? (

@@ -117,7 +117,7 @@ const HODMyRequestsPage = () => {
         </div>
       </div>
 
-      <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl w-fit">
+      <div className="flex items-center space-x-2 bg-slate-100 p-1 rounded-xl w-fit overflow-x-auto max-w-full">
         {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((f) => (
           <button
             key={f}

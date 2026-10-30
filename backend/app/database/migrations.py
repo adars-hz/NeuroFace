@@ -26,12 +26,7 @@ def _column_is_not_null(engine: Engine, table: str, column: str) -> bool:
 
 
 def migrate_leave_documents_leave_id(engine: Engine) -> bool:
-    """Allow a leave document to be uploaded before its leave application exists.
-
-    The upload endpoint stores the document first and links it to the leave
-    application later, so `leave_id` has to allow NULL. Older databases were
-    created with a NOT NULL column, so we rebuild the table once.
-    """
+    """Allow a leave document to be uploaded before its leave application exists."""
     if not _is_sqlite(engine):
         return False
     if not _column_is_not_null(engine, "leave_documents", "leave_id"):
@@ -83,7 +78,44 @@ def migrate_classes_add_advisor(engine: Engine) -> bool:
     return True
 
 
+def migrate_leave_applications_add_day_type(engine: Engine) -> bool:
+    """Add day_type column to leave_applications table if missing."""
+    if not _is_sqlite(engine):
+        return False
+
+    with engine.connect() as conn:
+        rows = conn.execute(text("PRAGMA table_info(leave_applications)")).fetchall()
+        col_names = [row[1] for row in rows]
+        if "day_type" in col_names:
+            return False
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "ALTER TABLE leave_applications ADD COLUMN day_type VARCHAR(20) DEFAULT 'FULL_DAY' NOT NULL"
+        ))
+    return True
+
+
+def migrate_ocr_results_add_day_type_and_subject(engine: Engine) -> bool:
+    """Add detected_day_type and detected_subject columns to ocr_results table if missing."""
+    if not _is_sqlite(engine):
+        return False
+
+    with engine.connect() as conn:
+        rows = conn.execute(text("PRAGMA table_info(ocr_results)")).fetchall()
+        col_names = [row[1] for row in rows]
+
+    with engine.begin() as conn:
+        if "detected_day_type" not in col_names:
+            conn.execute(text("ALTER TABLE ocr_results ADD COLUMN detected_day_type VARCHAR(20)"))
+        if "detected_subject" not in col_names:
+            conn.execute(text("ALTER TABLE ocr_results ADD COLUMN detected_subject VARCHAR(100)"))
+    return True
+
+
 def run_migrations(engine: Engine) -> None:
     """Run every migration. Safe to call on every startup."""
     migrate_leave_documents_leave_id(engine)
     migrate_classes_add_advisor(engine)
+    migrate_leave_applications_add_day_type(engine)
+    migrate_ocr_results_add_day_type_and_subject(engine)

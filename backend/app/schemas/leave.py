@@ -5,6 +5,7 @@ from app.models.leave import LeaveStatus, FinePaymentStatus
 
 class LeaveApplyRequest(BaseModel):
     subject_id: Optional[int] = None  # None means applies to all subjects
+    day_type: Optional[str] = "FULL_DAY"  # "FULL_DAY" or "HALF_DAY"
     start_date: date
     end_date: date
     reason: str
@@ -17,9 +18,11 @@ class LeaveReviewRequest(BaseModel):
 class OCRResultOut(BaseModel):
     id: int
     raw_text: str
-    detected_student_info: Optional[str]
-    detected_dates: Optional[str]
-    detected_reason: Optional[str]
+    detected_student_info: Optional[str] = None
+    detected_dates: Optional[str] = None
+    detected_reason: Optional[str] = None
+    detected_day_type: Optional[str] = None
+    detected_subject: Optional[str] = None
     confidence: float
 
     class Config:
@@ -40,8 +43,9 @@ class LeaveApplicationOut(BaseModel):
     student_id: int
     student_name: str
     register_number: str
-    subject_id: Optional[int]
+    subject_id: Optional[int] = None
     subject_name: Optional[str] = None
+    day_type: Optional[str] = "FULL_DAY"
     start_date: date
     end_date: date
     reason: str

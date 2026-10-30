@@ -135,7 +135,8 @@ const AcademicSetupPage = () => {
       {activeTab === 'classes' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm min-w-[640px]">
               <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
                 <tr>
                   <th className="px-6 py-3">Class Name</th>
@@ -181,6 +182,7 @@ const AcademicSetupPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit space-y-4">
@@ -248,7 +250,8 @@ const AcademicSetupPage = () => {
       {activeTab === 'subjects' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm min-w-[640px]">
               <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
                 <tr>
                   <th className="px-6 py-3">Code</th>
@@ -268,6 +271,7 @@ const AcademicSetupPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit space-y-4">
@@ -348,7 +352,8 @@ const AcademicSetupPage = () => {
       {activeTab === 'departments' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <table className="w-full text-left text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm min-w-[640px]">
               <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
                 <tr>
                   <th className="px-6 py-3">Code</th>
@@ -364,6 +369,7 @@ const AcademicSetupPage = () => {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit space-y-4">
@@ -405,7 +411,8 @@ const AcademicSetupPage = () => {
       {/* TAB: TIMETABLE SLOTS */}
       {activeTab === 'slots' && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm min-w-[400px]">
             <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
               <tr>
                 <th className="px-6 py-3">Slot Title</th>
@@ -423,6 +430,7 @@ const AcademicSetupPage = () => {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 

@@ -529,7 +529,7 @@ const FaceRegistrationPage = () => {
           {/* Main Card */}
           <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
             {/* Step Indicator Tracker Bar */}
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-1 sm:gap-2">
               {POSES.map((p, idx) => {
                 const isCaptured = !!capturedPoses[idx];
                 const isCurrent = currentStep === idx;
@@ -538,7 +538,7 @@ const FaceRegistrationPage = () => {
                     key={p.id}
                     type="button"
                     onClick={() => setCurrentStep(idx)}
-                    className={`p-2.5 rounded-2xl border text-center transition-all ${
+                    className={`p-1.5 sm:p-2.5 rounded-xl sm:rounded-2xl border text-center transition-all ${
                       isCurrent
                         ? 'border-teal-600 bg-teal-50/50 shadow-sm ring-2 ring-teal-500/20'
                         : isCaptured
@@ -553,7 +553,7 @@ const FaceRegistrationPage = () => {
                         <span className="text-xs font-bold font-mono">{idx + 1}</span>
                       )}
                     </div>
-                    <div className="text-[11px] font-bold truncate mt-1">
+                    <div className="text-[10px] sm:text-[11px] font-bold truncate mt-1">
                       {p.title.split(' ')[0]}
                     </div>
                   </button>
@@ -583,7 +583,7 @@ const FaceRegistrationPage = () => {
             </div>
 
             {/* Live Webcam Feed with Interactive Oval */}
-            <div className="relative rounded-2xl overflow-hidden bg-black flex items-center justify-center min-h-[400px]">
+            <div className="relative rounded-2xl overflow-hidden bg-black flex items-center justify-center min-h-[280px] sm:min-h-[400px]">
               <video
                 ref={videoRef}
                 autoPlay
@@ -596,7 +596,7 @@ const FaceRegistrationPage = () => {
               {!isSuccess && (
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                   <div
-                    className={`w-52 h-64 rounded-[48%] border-2 transition-all duration-300 flex flex-col items-center justify-between p-3 ${
+                    className={`w-44 h-56 sm:w-52 sm:h-64 rounded-[48%] border-2 transition-all duration-300 flex flex-col items-center justify-between p-3 ${
                       liveValidation.valid
                         ? 'border-emerald-400 shadow-[0_0_25px_rgba(16,185,129,0.35)]'
                         : 'border-dashed border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.2)]'

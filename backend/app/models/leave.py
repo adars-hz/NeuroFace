@@ -20,6 +20,7 @@ class LeaveApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.id", ondelete="CASCADE"), nullable=False)
     subject_id = Column(Integer, ForeignKey("subjects.id", ondelete="SET NULL"), nullable=True)  # Nullable if applies to all subjects
+    day_type = Column(String(20), default="FULL_DAY", nullable=False)  # "FULL_DAY" or "HALF_DAY"
     start_date = Column(Date, nullable=False)
     end_date = Column(Date, nullable=False)
     reason = Column(Text, nullable=False)
@@ -58,6 +59,8 @@ class OCRResult(Base):
     detected_student_info = Column(String(100), nullable=True)
     detected_dates = Column(String(100), nullable=True)
     detected_reason = Column(Text, nullable=True)
+    detected_day_type = Column(String(20), nullable=True)  # "HALF_DAY" or "FULL_DAY"
+    detected_subject = Column(String(100), nullable=True)  # Name or code of detected subject
     confidence = Column(Float, default=0.0, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
