@@ -27,3 +27,30 @@ class HODApprovalRequestOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class FaceReRegistrationCreate(BaseModel):
+    reason: Optional[str] = "Facial appearance update / recognition recalibration"
+
+class FaceReRegistrationReview(BaseModel):
+    remarks: Optional[str] = None
+
+class FaceReRegistrationOut(BaseModel):
+    id: int
+    student_id: int
+    student_name: str
+    register_number: str
+    department_id: Optional[int] = None
+    department_name: Optional[str] = None
+    class_id: Optional[int] = None
+    class_name: Optional[str] = None
+    status: ApprovalStatus
+    reason: Optional[str] = None
+    reviewed_by_id: Optional[int] = None
+    reviewed_by_name: Optional[str] = None
+    reviewed_at: Optional[datetime] = None
+    admin_remarks: Optional[str] = None
+    is_used: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True

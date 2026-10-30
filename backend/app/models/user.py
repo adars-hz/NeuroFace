@@ -75,3 +75,4 @@ class Student(Base):
     leave_applications = relationship("LeaveApplication", back_populates="student", cascade="all, delete-orphan")
     medical_waivers = relationship("MedicalWaiver", back_populates="student", cascade="all, delete-orphan")
     fine_records = relationship("FineRecord", back_populates="student", cascade="all, delete-orphan")
+    face_re_registration_requests = relationship("FaceReRegistrationRequest", back_populates="student", cascade="all, delete-orphan")

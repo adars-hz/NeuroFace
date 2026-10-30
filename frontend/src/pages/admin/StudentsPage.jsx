@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { GraduationCap, Plus, CheckCircle, XCircle, Mail, Hash, X, Edit2, Trash2, RefreshCw, AlertTriangle, Clock } from 'lucide-react';
+import { GraduationCap, Plus, CheckCircle, XCircle, Mail, Hash, X, Edit2, Trash2, RefreshCw, AlertTriangle, Clock, Camera } from 'lucide-react';
 
 const StudentsPage = () => {
   const { user } = useAuth();
@@ -120,6 +120,23 @@ const StudentsPage = () => {
       setTimeout(() => setMsg(''), 3000);
     } catch (err) {
       alert('Error resetting face: ' + (err.response?.data?.detail || err.message));
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAuthorizeFace = async (student) => {
+    if (!window.confirm(`Authorize '${student.full_name}' (${student.register_number}) to re-register their face? This will allow them to capture a new facial template.`)) {
+      return;
+    }
+    setActionLoading(true);
+    try {
+      const res = await api.post(`/admin/students/${student.id}/authorize-face-re-registration`);
+      setMsg(res.data.message || `Student '${student.full_name}' authorized for face re-registration.`);
+      loadData();
+      setTimeout(() => setMsg(''), 4000);
+    } catch (err) {
+      alert('Error: ' + (err.response?.data?.detail || err.message));
     } finally {
       setActionLoading(false);
     }
@@ -247,7 +264,7 @@ const StudentsPage = () => {
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex items-center justify-end space-x-1.5">
-                    {s.face_registered && (
+                    {s.face_registered && (<>
                       <button
                         onClick={() => handleResetFace(s)}
                         className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 transition-all flex items-center space-x-1"
@@ -256,7 +273,15 @@ const StudentsPage = () => {
                         <RefreshCw className="w-3 h-3" />
                         <span>Reset Face</span>
                       </button>
-                    )}
+                      <button
+                        onClick={() => handleAuthorizeFace(s)}
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-teal-50 text-teal-800 border border-teal-200 hover:bg-teal-100 transition-all flex items-center space-x-1"
+                        title="Authorize Student Face Re-Registration"
+                      >
+                        <Camera className="w-3 h-3" />
+                        <span>Allow Re-Reg</span>
+                      </button>
+                    </>)}
                     <button
                       onClick={() => openEditModal(s)}
                       className="p-1.5 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 transition-colors"

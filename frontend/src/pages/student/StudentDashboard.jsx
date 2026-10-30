@@ -88,13 +88,13 @@ const StudentDashboard = () => {
         <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-between">
           <div className="flex items-center space-x-3 text-xs text-emerald-900">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-            <span><b>Biometrics Enrolled:</b> Your 512-D ArcFace template is active and ready for automatic attendance marking.</span>
+            <span><b>Biometrics Enrolled:</b> Your 512-D ArcFace template is active. Re-registration requires Admin/HOD authorization.</span>
           </div>
           <Link
             to="/student/register-face"
             className="text-xs font-bold text-emerald-700 hover:underline whitespace-nowrap"
           >
-            Recalibrate
+            Re-Register Face
           </Link>
         </div>
       )}

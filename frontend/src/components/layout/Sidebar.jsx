@@ -14,12 +14,16 @@ const Sidebar = () => {
   const isHod = user?.is_hod;
   const isAdvisor = user?.is_class_advisor;
   const advisedClasses = user?.advised_class_names || [];
-  const [pendingCount, setPendingCount] = useState(0);
+  const [pendingCounts, setPendingCounts] = useState({ pending_hod: 0, pending_face: 0, total: 0 });
 
   useEffect(() => {
     if (isHod || role === 'ADMIN') {
       api.get('/admin/approvals/pending-count')
-        .then(res => setPendingCount(res.data.pending_count || 0))
+        .then(res => setPendingCounts({
+          pending_hod: res.data.pending_hod_count || 0,
+          pending_face: res.data.pending_face_count || 0,
+          total: res.data.total_pending || (res.data.pending_count || 0)
+        }))
         .catch(() => {});
     }
   }, [isHod, role]);
@@ -71,10 +75,10 @@ const Sidebar = () => {
               </NavLink>
               <NavLink to="/admin/approvals" className={linkClass}>
                 <ShieldAlert className="w-4 h-4 text-amber-500" />
-                <span className="flex-1">HOD Approvals</span>
-                {pendingCount > 0 && (
+                <span className="flex-1">Approvals Queue</span>
+                {pendingCounts.total > 0 && (
                   <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
-                    {pendingCount}
+                    {pendingCounts.total}
                   </span>
                 )}
               </NavLink>
@@ -164,12 +168,21 @@ const Sidebar = () => {
                     <CheckSquare className="w-4 h-4 text-teal-600" />
                     <span>Teacher Assignments</span>
                   </NavLink>
+                  <NavLink to="/admin/approvals?tab=face" className={linkClass}>
+                    <Camera className="w-4 h-4 text-amber-600" />
+                    <span className="flex-1">Student Face Approvals</span>
+                    {pendingCounts.pending_face > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+                        {pendingCounts.pending_face}
+                      </span>
+                    )}
+                  </NavLink>
                   <NavLink to="/teacher/my-requests" className={linkClass}>
                     <Clock className="w-4 h-4 text-amber-600" />
                     <span className="flex-1">My Approval Requests</span>
-                    {pendingCount > 0 && (
+                    {pendingCounts.pending_hod > 0 && (
                       <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
-                        {pendingCount}
+                        {pendingCounts.pending_hod}
                       </span>
                     )}
                   </NavLink>

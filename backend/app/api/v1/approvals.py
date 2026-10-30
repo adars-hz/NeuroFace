@@ -7,7 +7,8 @@ from app.database.session import get_db
 from app.core.security import get_password_hash
 from app.models.user import User, Teacher, Student, UserRole, TeacherDesignation
 from app.models.academic import Department, Class, Subject, TeacherSubjectClassAssignment
-from app.models.approval import HODApprovalRequest, ApprovalRequestType, ApprovalStatus
+from app.models.approval import HODApprovalRequest, ApprovalRequestType, ApprovalStatus, FaceReRegistrationRequest
+from app.schemas.approval import FaceReRegistrationOut, FaceReRegistrationReview
 from app.schemas.approval import HODApprovalRequestOut, HODApprovalRequestReview
 from app.api.deps import get_current_admin, get_current_admin_or_hod
 from app.core.audit import log_audit_event
@@ -332,7 +333,25 @@ def get_pending_approval_count(
     if current_user.role != UserRole.ADMIN:
         query = query.filter(HODApprovalRequest.requested_by_id == current_user.id)
     count = query.count()
-    return {"pending_count": count}
+    # Also count pending face re-registrations
+    face_q = db.query(FaceReRegistrationRequest).join(Student, FaceReRegistrationRequest.student_id == Student.id).filter(
+        FaceReRegistrationRequest.status == ApprovalStatus.PENDING
+    )
+    if current_user.role != UserRole.ADMIN:
+        teacher = current_user.teacher_profile
+        if teacher and teacher.department_id:
+            face_q = face_q.filter(Student.department_id == teacher.department_id)
+        else:
+            face_q = None
+
+    pending_face = face_q.count() if face_q is not None else 0
+
+    return {
+        "pending_count": count + pending_face if current_user.role == UserRole.ADMIN else pending_face,
+        "pending_hod_count": count,
+        "pending_face_count": pending_face,
+        "total_pending": count + pending_face
+    }
 
 
 @router.post("/approvals/{request_id}/approve")
@@ -409,3 +428,251 @@ def reject_request(
     )
 
     return {"message": f"Request '{req.title}' has been rejected.", "status": req.status.value}
+
+
+# =====================================================================
+# STUDENT FACE RE-REGISTRATION APPROVAL WORKFLOWS (ADMIN & HOD)
+# =====================================================================
+
+@router.get("/face-re-registrations", response_model=List[FaceReRegistrationOut])
+def get_face_re_registration_requests(
+    status_filter: Optional[str] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_or_hod)
+):
+    """
+    Get student face re-registration requests.
+    - Admins see requests from all departments.
+    - HODs see requests for students belonging to their department.
+    """
+    query = db.query(FaceReRegistrationRequest).join(Student, FaceReRegistrationRequest.student_id == Student.id)
+
+    if current_user.role != UserRole.ADMIN:
+        teacher = current_user.teacher_profile
+        if not teacher or not teacher.department_id:
+            return []
+        query = query.filter(Student.department_id == teacher.department_id)
+
+    if status_filter and status_filter.upper() != "ALL" and status_filter.upper() in [s.value for s in ApprovalStatus]:
+        query = query.filter(FaceReRegistrationRequest.status == ApprovalStatus(status_filter.upper()))
+
+    requests = query.order_by(FaceReRegistrationRequest.created_at.desc()).all()
+    results = []
+    for r in requests:
+        rev_name = None
+        if r.reviewed_by:
+            if r.reviewed_by.teacher_profile:
+                t = r.reviewed_by.teacher_profile
+                role_label = "HOD" if t.is_hod else "Faculty"
+                rev_name = f"{t.full_name} ({role_label})"
+            else:
+                rev_name = f"{r.reviewed_by.username} (Admin)"
+
+        dept_name = r.student.department.name if r.student.department else None
+        class_name = r.student.class_assigned.name if r.student.class_assigned else None
+
+        results.append(FaceReRegistrationOut(
+            id=r.id,
+            student_id=r.student_id,
+            student_name=r.student.full_name,
+            register_number=r.student.register_number,
+            department_id=r.student.department_id,
+            department_name=dept_name,
+            class_id=r.student.class_id,
+            class_name=class_name,
+            status=r.status,
+            reason=r.reason,
+            reviewed_by_id=r.reviewed_by_id,
+            reviewed_by_name=rev_name,
+            reviewed_at=r.reviewed_at,
+            admin_remarks=r.admin_remarks,
+            is_used=r.is_used,
+            created_at=r.created_at
+        ))
+    return results
+
+
+@router.get("/face-re-registrations/pending-count")
+def get_pending_face_re_registration_count(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_or_hod)
+):
+    """Returns number of pending student face re-registration requests."""
+    query = db.query(FaceReRegistrationRequest).join(Student, FaceReRegistrationRequest.student_id == Student.id).filter(
+        FaceReRegistrationRequest.status == ApprovalStatus.PENDING
+    )
+    if current_user.role != UserRole.ADMIN:
+        teacher = current_user.teacher_profile
+        if not teacher or not teacher.department_id:
+            return {"pending_count": 0}
+        query = query.filter(Student.department_id == teacher.department_id)
+    count = query.count()
+    return {"pending_count": count}
+
+
+@router.post("/face-re-registrations/{request_id}/approve")
+def approve_face_re_registration(
+    request_id: int,
+    review_in: FaceReRegistrationReview,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_or_hod)
+):
+    """
+    Accept / Approve student face re-registration request (Admin or HOD).
+    Unlocks biometric template recapture for the student.
+    """
+    req = db.query(FaceReRegistrationRequest).filter(FaceReRegistrationRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Face re-registration request not found")
+
+    if current_user.role != UserRole.ADMIN:
+        teacher = current_user.teacher_profile
+        if not teacher or teacher.department_id != req.student.department_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only approve re-registration requests for students in your department."
+            )
+
+    if req.status != ApprovalStatus.PENDING:
+        raise HTTPException(status_code=400, detail=f"Request is already {req.status.value}")
+
+    approver_role = "HOD" if (current_user.teacher_profile and current_user.teacher_profile.is_hod) else "Admin"
+    req.status = ApprovalStatus.APPROVED
+    req.reviewed_by_id = current_user.id
+    req.reviewed_at = datetime.now(timezone.utc)
+    req.admin_remarks = review_in.remarks or f"Approved by {approver_role} for biometric recalibration"
+    req.is_used = False
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="APPROVE_FACE_RE_REGISTRATION",
+        entity_type="Student",
+        user_id=current_user.id,
+        entity_id=req.student_id,
+        details={
+            "request_id": req.id,
+            "student_name": req.student.full_name,
+            "register_number": req.student.register_number,
+            "approver_role": approver_role,
+            "remarks": req.admin_remarks
+        }
+    )
+
+    return {
+        "message": f"Face re-registration request for student '{req.student.full_name}' approved successfully.",
+        "status": req.status.value
+    }
+
+
+@router.post("/face-re-registrations/{request_id}/reject")
+def reject_face_re_registration(
+    request_id: int,
+    review_in: FaceReRegistrationReview,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_or_hod)
+):
+    """
+    Reject student face re-registration request (Admin or HOD).
+    """
+    req = db.query(FaceReRegistrationRequest).filter(FaceReRegistrationRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Face re-registration request not found")
+
+    if current_user.role != UserRole.ADMIN:
+        teacher = current_user.teacher_profile
+        if not teacher or teacher.department_id != req.student.department_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only reject re-registration requests for students in your department."
+            )
+
+    if req.status != ApprovalStatus.PENDING:
+        raise HTTPException(status_code=400, detail=f"Request is already {req.status.value}")
+
+    approver_role = "HOD" if (current_user.teacher_profile and current_user.teacher_profile.is_hod) else "Admin"
+    req.status = ApprovalStatus.REJECTED
+    req.reviewed_by_id = current_user.id
+    req.reviewed_at = datetime.now(timezone.utc)
+    req.admin_remarks = review_in.remarks or f"Rejected by {approver_role}"
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="REJECT_FACE_RE_REGISTRATION",
+        entity_type="Student",
+        user_id=current_user.id,
+        entity_id=req.student_id,
+        details={
+            "request_id": req.id,
+            "student_name": req.student.full_name,
+            "register_number": req.student.register_number,
+            "approver_role": approver_role,
+            "remarks": req.admin_remarks
+        }
+    )
+
+    return {
+        "message": f"Face re-registration request for student '{req.student.full_name}' has been rejected.",
+        "status": req.status.value
+    }
+
+
+@router.post("/students/{student_id}/authorize-face-re-registration")
+def direct_authorize_student_face(
+    student_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_or_hod)
+):
+    """Directly authorize a student to re-register their face (Admin or HOD)."""
+    student = db.query(Student).filter(Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if current_user.role != UserRole.ADMIN:
+        teacher = current_user.teacher_profile
+        if not teacher or teacher.department_id != student.department_id:
+            raise HTTPException(status_code=403, detail="You can only authorize students in your department.")
+
+    approver_role = "HOD" if (current_user.teacher_profile and current_user.teacher_profile.is_hod) else "Admin"
+
+    pending = db.query(FaceReRegistrationRequest).filter(
+        FaceReRegistrationRequest.student_id == student.id,
+        FaceReRegistrationRequest.status == ApprovalStatus.PENDING
+    ).first()
+
+    if pending:
+        pending.status = ApprovalStatus.APPROVED
+        pending.reviewed_by_id = current_user.id
+        pending.reviewed_at = datetime.now(timezone.utc)
+        pending.admin_remarks = f"Directly authorized by {approver_role}"
+        pending.is_used = False
+        req = pending
+    else:
+        req = FaceReRegistrationRequest(
+            student_id=student.id,
+            status=ApprovalStatus.APPROVED,
+            reason="Direct authorization by Administrator / HOD",
+            reviewed_by_id=current_user.id,
+            reviewed_at=datetime.now(timezone.utc),
+            admin_remarks=f"Directly authorized by {approver_role}",
+            is_used=False
+        )
+        db.add(req)
+
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="DIRECT_AUTHORIZE_FACE_RE_REGISTRATION",
+        entity_type="Student",
+        user_id=current_user.id,
+        entity_id=student.id,
+        details={"register_number": student.register_number, "approver_role": approver_role}
+    )
+
+    return {
+        "message": f"Student '{student.full_name}' is now authorized to re-register face biometrics.",
+        "student_id": student.id,
+        "status": "APPROVED"
+    }

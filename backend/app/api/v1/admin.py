@@ -655,6 +655,18 @@ def update_student(
         db.query(FaceEmbedding).filter(FaceEmbedding.student_id == student.id).delete()
         student.face_registered = False
 
+    from app.models.approval import FaceReRegistrationRequest, ApprovalStatus
+    pending_reqs = db.query(FaceReRegistrationRequest).filter(
+        FaceReRegistrationRequest.student_id == student.id,
+        FaceReRegistrationRequest.status == ApprovalStatus.PENDING
+    ).all()
+    for req in pending_reqs:
+        req.status = ApprovalStatus.APPROVED
+        req.reviewed_by_id = current_user.id
+        req.reviewed_at = datetime.now(timezone.utc)
+        req.admin_remarks = "Face reset by Administrator / HOD"
+        req.is_used = True
+
     db.commit()
     db.refresh(student)
     db.refresh(user)
@@ -696,6 +708,18 @@ def reset_student_face(
 
     deleted_count = db.query(FaceEmbedding).filter(FaceEmbedding.student_id == student.id).delete()
     student.face_registered = False
+
+    from app.models.approval import FaceReRegistrationRequest, ApprovalStatus
+    pending_reqs = db.query(FaceReRegistrationRequest).filter(
+        FaceReRegistrationRequest.student_id == student.id,
+        FaceReRegistrationRequest.status == ApprovalStatus.PENDING
+    ).all()
+    for req in pending_reqs:
+        req.status = ApprovalStatus.APPROVED
+        req.reviewed_by_id = current_user.id
+        req.reviewed_at = datetime.now(timezone.utc)
+        req.admin_remarks = "Face reset by Administrator / HOD"
+        req.is_used = True
     db.commit()
 
     log_audit_event(
