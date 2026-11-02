@@ -17,6 +17,7 @@ from app.ai.detector import face_detector
 from app.ai.imaging import decode_base64_image
 from app.ai.recognizer import face_recognizer
 from app.ai.quality import evaluate_face_quality
+from app.ai.anti_spoof import evaluate_face_authenticity
 from app.services.attendance_calculator import calculate_student_full_report
 
 import numpy as np
@@ -202,6 +203,20 @@ def validate_single_frame(
         return {"valid": False, "message": "Multiple faces detected! Please ensure only you are visible."}
 
     face = detected[0]
+    is_authentic, auth_status, auth_reason = evaluate_face_authenticity(
+        full_frame=image,
+        box=face["box"],
+        crop_bgr=face["crop"],
+        landmarks=face.get("landmarks"),
+        detection_score=face["score"]
+    )
+    if not is_authentic:
+        if auth_status == "SPOOF_DETECTED":
+            return {"valid": False, "message": "Phone/Screen display detected. Live physical face required."}
+        elif auth_status == "NON_FACE_OBJECT":
+            return {"valid": False, "message": "Invalid facial structure. Please face the camera directly."}
+        return {"valid": False, "message": auth_reason}
+
     is_ok, quality_message = evaluate_face_quality(face["crop"])
     if not is_ok:
         return {"valid": False, "message": quality_message}
@@ -299,7 +314,22 @@ def register_student_face(
 
         face = detected[0]
         height, width = face["crop"].shape[:2]
-        if height < 30 or width < 30:
+        if height < 45 or width < 45:
+            continue
+
+        is_authentic, auth_status, auth_reason = evaluate_face_authenticity(
+            full_frame=image,
+            box=face["box"],
+            crop_bgr=face["crop"],
+            landmarks=face.get("landmarks"),
+            detection_score=face["score"]
+        )
+        if not is_authentic:
+            if auth_status == "SPOOF_DETECTED":
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Frame {index + 1}: Screen or photo presentation detected. Face must be physically present in front of the camera."
+                )
             continue
 
         valid_embeddings.append(face_recognizer.extract_embedding(face["aligned"]))
@@ -341,12 +371,21 @@ def register_student_face(
 
     # Replace any template this student had before.
     db.query(FaceEmbedding).filter(FaceEmbedding.student_id == student.id).delete()
+    # 1. Save mean composite embedding
     db.add(FaceEmbedding(
         student_id=student.id,
         embedding_vector=json.dumps(mean_embedding.tolist()),
         quality_score=0.98,
-        model_name="ArcFace-512"
+        model_name="Composite-Mean"
     ))
+    # 2. Save individual pose embeddings for higher multi-angle accuracy
+    for idx, emb in enumerate(valid_embeddings):
+        db.add(FaceEmbedding(
+            student_id=student.id,
+            embedding_vector=json.dumps(emb.tolist()),
+            quality_score=0.95,
+            model_name=f"Pose-{idx + 1}"
+        ))
     student.face_registered = True
     if approved_re_reg_req:
         approved_re_reg_req.is_used = True

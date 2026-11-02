@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import {
   Camera, CheckCircle2, UserCheck, AlertTriangle, Clock,
-  StopCircle, Users, Sparkles, Shield, UserX
+  StopCircle, Users, Sparkles, Shield, UserX, X, RotateCcw
 } from 'lucide-react';
 
 const LiveAttendancePage = () => {
@@ -145,18 +145,26 @@ const LiveAttendancePage = () => {
           const boxW = (x2 - x1) * scaleX;
           const boxH = (y2 - y1) * scaleY;
 
-          let strokeColor = '#ef4444'; // Red for unknown
-          let tagText = 'UNKNOWN';
+          let strokeColor = '#ef4444'; // Red for unknown / unregistered
+          let tagText = 'UNREGISTERED FACE';
 
           if (f.status === 'MATCHED' || f.status === 'ALREADY_MARKED') {
             strokeColor = '#10b981'; // Green for recognized
-            tagText = `${f.student_name} (${f.register_number})`;
+            tagText = `${f.student_name} (${f.register_number}) [${Math.round((f.confidence || 0) * 100)}%]`;
           } else if (f.status === 'CONFIRMING') {
             strokeColor = '#f59e0b'; // Amber for verifying
-            tagText = `Verifying: ${f.student_name}...`;
+            tagText = `Verifying: ${f.student_name}... [${Math.round((f.confidence || 0) * 100)}%]`;
           } else if (f.status === 'LOW_QUALITY') {
             strokeColor = '#64748b'; // Slate for low quality
             tagText = 'Low Quality / Blur';
+          } else if (f.status === 'SPOOF_DETECTED') {
+            strokeColor = '#f43f5e'; // Rose-500 for phone/screen spoof
+            tagText = 'PHONE / SCREEN DETECTED - REJECTED';
+          } else if (f.status === 'UNKNOWN') {
+            strokeColor = '#ef4444';
+            tagText = f.confidence > 0
+              ? `UNREGISTERED (${Math.round(f.confidence * 100)}%)`
+              : 'UNREGISTERED FACE';
           }
 
           // Draw Box
@@ -188,6 +196,20 @@ const LiveAttendancePage = () => {
 
     return () => clearInterval(interval);
   }, [cameraActive, sessionId]);
+
+  const handleResetRecord = async (recordId, studentName) => {
+    if (!window.confirm(`Revoke / reset attendance for ${studentName}?`)) return;
+    try {
+      await api.delete(`/attendance/sessions/${sessionId}/records/${recordId}`);
+      setPresentRecords((prev) => prev.filter((r) => r.id !== recordId));
+      setTelemetry((prev) => ({
+        ...prev,
+        present_count: Math.max(0, prev.present_count - 1)
+      }));
+    } catch (err) {
+      alert(err.response?.data?.detail || err.message || 'Failed to reset attendance record');
+    }
+  };
 
   const handleFinish = async () => {
     if (!window.confirm('Are you sure you want to complete and finalize this attendance session?')) return;
@@ -375,13 +397,23 @@ const LiveAttendancePage = () => {
                       <div className="font-bold text-slate-800">{r.student_name}</div>
                       <div className="font-mono text-[10px] text-slate-500">{r.register_number}</div>
                     </div>
-                    <div className="text-right">
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
-                        PRESENT
-                      </span>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        {new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    <div className="flex items-center space-x-2">
+                      <div className="text-right">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                          PRESENT
+                        </span>
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          {new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleResetRecord(r.id, r.student_name)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-transparent hover:border-rose-200"
+                        title={`Reset / Revoke attendance for ${r.student_name}`}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
                 ))

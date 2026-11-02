@@ -144,19 +144,42 @@ class FaceRecognizer:
         `registered_students` is a list of {"student_id": int, "embedding": array}.
         Returns (student_id or None, best_score, "MATCHED" or "UNKNOWN").
         """
-        thresh = threshold if threshold is not None else settings.SIMILARITY_THRESHOLD
-        best_score = -1.0
-        best_student_id = None
+        if threshold is not None:
+            thresh = threshold
+        elif self.onnx_session is not None:
+            thresh = 0.52
+        else:
+            thresh = settings.SIMILARITY_THRESHOLD  # 0.70 for InceptionResnetV1 (FaceNet)
 
+        if not registered_students:
+            return None, 0.0, "UNKNOWN"
+
+        # Aggregate max similarity score per student across all their registered templates
+        student_scores: Dict[int, float] = {}
         for record in registered_students:
+            sid = record["student_id"]
             score = self.compute_similarity(query_embedding, record["embedding"])
-            if score > best_score:
-                best_score = score
-                best_student_id = record["student_id"]
+            if sid not in student_scores or score > student_scores[sid]:
+                student_scores[sid] = score
+
+        if not student_scores:
+            return None, 0.0, "UNKNOWN"
+
+        # Sort candidates descending by match score
+        ranked_candidates = sorted(student_scores.items(), key=lambda x: x[1], reverse=True)
+        best_student_id, best_score = ranked_candidates[0]
+
+        # Multi-candidate ambiguity check (if multiple registered students are close above threshold)
+        if len(ranked_candidates) > 1 and best_score >= thresh:
+            second_student_id, second_score = ranked_candidates[1]
+            if second_score >= thresh and (best_score - second_score) < 0.02:
+                # Ambiguous match between two registered students, flag as UNKNOWN for safety
+                return None, round(best_score, 4), "UNKNOWN"
 
         if best_score >= thresh and best_student_id is not None:
-            return best_student_id, best_score, "MATCHED"
-        return None, max(0.0, best_score), "UNKNOWN"
+            return best_student_id, round(best_score, 4), "MATCHED"
+
+        return None, max(0.0, round(best_score, 4)), "UNKNOWN"
 
 
 # One shared recognizer for the whole application.

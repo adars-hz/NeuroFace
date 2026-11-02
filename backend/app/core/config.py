@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
 
     # Database
-    DATABASE_URL: str = "sqlite:///./neuroface.db"
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{os.path.abspath(os.path.join(BASE_DIR, 'neuroface.db')).replace(chr(92), '/')}")
 
     # Institutional Defaults
     ATTENDANCE_MIN_PERCENTAGE: float = 85.0
@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     DEFAULT_FINE_AMOUNT: float = 500.0
 
     # AI Recognition Parameters
-    SIMILARITY_THRESHOLD: float = 0.52      # ArcFace cosine similarity threshold for attendance
-    DUPLICATE_FACE_THRESHOLD: float = 0.85  # Stricter threshold for blocking identical multi-ID enrollments
+    SIMILARITY_THRESHOLD: float = 0.70      # Cosine threshold for FaceNet / InceptionResnetV1 (0.70 calibrates FAR near zero to reject unregistered faces)
+    DUPLICATE_FACE_THRESHOLD: float = 0.78  # Stricter threshold for blocking identical multi-ID enrollments
     MIN_FACE_SIZE: int = 45                # Minimum pixel bounding box
     BLUR_THRESHOLD: float = 20.0            # Laplacian variance cutoff
     TEMPORAL_CONFIRM_FRAMES: int = 2       # Frames out of 3 needed for confirmation

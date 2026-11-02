@@ -58,8 +58,8 @@ class FaceDetector:
             select_largest=False,
             device=device,
             post_process=False,
-            min_face_size=40,
-            thresholds=[0.6, 0.7, 0.7]
+            min_face_size=50,
+            thresholds=[0.65, 0.75, 0.85]
         )
 
     @property
@@ -109,8 +109,11 @@ class FaceDetector:
             x2 = min(w, x2)
             y2 = min(h, y2)
 
-            # Skip boxes that are too small to be useful.
-            if (x2 - x1) < 20 or (y2 - y1) < 20:
+            # Reject non-face objects and low confidence detections
+            if float(scores[i]) < 0.88:
+                continue
+            # Skip boxes that are too small to be a genuine face in front of the camera
+            if (x2 - x1) < 45 or (y2 - y1) < 45:
                 continue
 
             pts = None

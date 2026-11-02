@@ -24,6 +24,7 @@ from app.ai.detector import face_detector
 from app.ai.imaging import decode_base64_image
 from app.ai.recognizer import face_recognizer
 from app.ai.quality import evaluate_face_quality
+from app.ai.anti_spoof import evaluate_face_authenticity
 from app.ai.tracker import frame_tracker
 
 router = APIRouter()
@@ -287,11 +288,78 @@ def process_camera_frame(
     newly_marked_count = 0
     recognized_count = 0
     unknown_count = 0
+    has_spoof_in_frame = False
 
+    # Pass 1: Check authenticity across all detected faces to catch any spoofing attempts in the scene
+    evaluated_faces = []
     for detected in detected_faces:
+        box = detected["box"]
+        crop = detected["crop"]
+
+        # 1. Anti-Spoofing & Non-Face Object Filter
+        is_authentic, auth_status, auth_reason = evaluate_face_authenticity(
+            full_frame=frame,
+            box=box,
+            crop_bgr=crop,
+            landmarks=detected.get("landmarks"),
+            detection_score=detected["score"]
+        )
+
+        if not is_authentic and auth_status == "SPOOF_DETECTED":
+            has_spoof_in_frame = True
+
+        evaluated_faces.append({
+            "detected": detected,
+            "is_authentic": is_authentic,
+            "auth_status": auth_status,
+            "auth_reason": auth_reason
+        })
+
+    # If any phone or screen presentation attack was detected in this frame,
+    # immediately purge all pending confirmation hits and lock the session.
+    # This guarantees a phone presentation cannot mark attendance!
+    if has_spoof_in_frame:
+        frame_tracker.record_spoof(session.id, lockout_seconds=4.0)
+
+    # Pass 2: Process faces
+    for item in evaluated_faces:
+        detected = item["detected"]
         box = detected["box"]
         aligned = detected["aligned"]
         crop = detected["crop"]
+        is_authentic = item["is_authentic"]
+        auth_status = item["auth_status"]
+
+        if not is_authentic:
+            if auth_status == "NON_FACE_OBJECT":
+                # User asked: "if the camera finds any other objects don't detect"
+                # Silently ignore random objects (do not draw or recognize)
+                continue
+            elif auth_status == "SPOOF_DETECTED":
+                # User asked: "it also detecting face from phone ... don't detect"
+                # Reject phone/screen display presentations
+                face_results.append(DetectedFaceResult(
+                    box=box,
+                    confidence=round(detected["score"], 3),
+                    status="SPOOF_DETECTED"
+                ))
+                continue
+            else:
+                face_results.append(DetectedFaceResult(
+                    box=box,
+                    confidence=round(detected["score"], 3),
+                    status="LOW_QUALITY"
+                ))
+                continue
+
+        # If the session is currently locked out due to a phone spoof detected in this frame or recently:
+        if frame_tracker.is_locked_out(session.id):
+            face_results.append(DetectedFaceResult(
+                box=box,
+                confidence=round(detected["score"], 3),
+                status="SPOOF_DETECTED"
+            ))
+            continue
 
         # 2. Quality check
         is_quality_ok, _ = evaluate_face_quality(crop)
@@ -322,7 +390,7 @@ def process_camera_frame(
         if matched_id in already_marked_ids:
             status_label = "ALREADY_MARKED"
         else:
-            # 5. The student must be seen in a second frame before we record it.
+            # 5. The student must be seen in consecutive clean frames before we record it.
             confirmed = frame_tracker.record_hit(session.id, matched_id)
             if not confirmed:
                 status_label = "CONFIRMING"
@@ -366,6 +434,59 @@ def process_camera_frame(
         total_present=len(already_marked_ids),
         faces=face_results
     )
+
+
+@router.delete("/sessions/{id}/records/{record_id}")
+def reset_attendance_record(
+    id: int,
+    record_id: int,
+    db: Session = Depends(get_db),
+    current_teacher_user: User = Depends(get_current_teacher)
+):
+    """Teacher manually revokes/resets an attendance record (e.g. accidental or false positive hit)."""
+    session = db.query(AttendanceSession).filter(AttendanceSession.id == id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Attendance session not found")
+
+    teacher = current_teacher_user.teacher_profile
+    if session.teacher_id != teacher.id and not teacher.is_hod and current_teacher_user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Unauthorized to modify records for this session")
+
+    record = db.query(AttendanceRecord).filter(
+        AttendanceRecord.id == record_id,
+        AttendanceRecord.session_id == id
+    ).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Attendance record not found in this session")
+
+    student_id = record.student_id
+    student_name = record.student.full_name if record.student else f"Student #{student_id}"
+
+    # Clear from temporal confirmation buffer so it won't instantly re-confirm
+    frame_tracker.clear_student(session.id, student_id)
+
+    db.delete(record)
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="REVOKE_ATTENDANCE_RECORD",
+        entity_type="AttendanceRecord",
+        user_id=current_teacher_user.id,
+        entity_id=record_id,
+        details={
+            "session_id": id,
+            "student_id": student_id,
+            "student_name": student_name,
+            "reason": "Teacher manual reset"
+        }
+    )
+
+    return {
+        "message": f"Attendance record for {student_name} has been reset/revoked.",
+        "record_id": record_id,
+        "student_id": student_id
+    }
 
 
 @router.post("/sessions/{id}/complete")
