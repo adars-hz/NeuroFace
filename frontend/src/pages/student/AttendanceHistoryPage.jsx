@@ -28,58 +28,98 @@ const AttendanceHistoryPage = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop View Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm min-w-[600px]">
-          <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
-            <tr>
-              <th className="px-6 py-3.5">Session Date</th>
-              <th className="px-6 py-3.5">Subject</th>
-              <th className="px-6 py-3.5">Faculty</th>
-              <th className="px-6 py-3.5">Recognition Time</th>
-              <th className="px-6 py-3.5">Verification Method</th>
-              <th className="px-6 py-3.5">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {history.length === 0 ? (
+            <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
               <tr>
-                <td colSpan="6" className="px-6 py-8 text-center text-xs text-slate-400">
-                  No attendance entries recorded yet.
-                </td>
+                <th className="px-6 py-3.5">Session Date</th>
+                <th className="px-6 py-3.5">Subject</th>
+                <th className="px-6 py-3.5">Faculty</th>
+                <th className="px-6 py-3.5">Recognition Time</th>
+                <th className="px-6 py-3.5">Verification Method</th>
+                <th className="px-6 py-3.5">Status</th>
               </tr>
-            ) : (
-              history.map((h) => (
-                <tr key={h.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 text-xs font-semibold text-slate-900">
-                    {h.date}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-slate-900">{h.subject_name}</div>
-                    <div className="font-mono text-xs text-slate-500">{h.subject_code}</div>
-                  </td>
-                  <td className="px-6 py-4 text-xs text-slate-600">
-                    {h.teacher_name}
-                  </td>
-                  <td className="px-6 py-4 text-xs text-slate-500 font-mono">
-                    {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">
-                      {h.verification_method}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                      h.status === 'PRESENT' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                    }`}>
-                      {h.status}
-                    </span>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {history.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="px-6 py-8 text-center text-xs text-slate-400">
+                    No attendance entries recorded yet.
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : (
+                history.map((h) => (
+                  <tr key={h.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 text-xs font-semibold text-slate-900">
+                      {h.date}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-slate-900">{h.subject_name}</div>
+                      <div className="font-mono text-xs text-slate-500">{h.subject_code}</div>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-600">
+                      {h.teacher_name}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500 font-mono">
+                      {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">
+                        {h.verification_method}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        h.status === 'PRESENT' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}>
+                        {h.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile View Responsive Cards */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {history.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-400">
+              No attendance entries recorded yet.
+            </div>
+          ) : (
+            history.map((h) => (
+              <div key={h.id} className="p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-bold text-slate-900 text-sm">{h.subject_name}</div>
+                    <div className="font-mono text-xs text-slate-500">{h.subject_code}</div>
+                  </div>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                    h.status === 'PRESENT' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}>
+                    {h.status}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-slate-600 pt-1 border-t border-slate-50">
+                  <span>{h.date}</span>
+                  <span className="font-mono text-[11px] text-slate-500">
+                    {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Faculty: {h.teacher_name}</span>
+                  <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px]">
+                    {h.verification_method}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

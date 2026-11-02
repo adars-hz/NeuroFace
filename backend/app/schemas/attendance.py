@@ -51,7 +51,8 @@ class DetectedFaceResult(BaseModel):
     student_name: Optional[str] = None
     register_number: Optional[str] = None
     confidence: float
-    status: str  # "MATCHED", "UNKNOWN", "LOW_QUALITY", "ALREADY_MARKED"
+    status: str  # "MATCHED", "UNKNOWN", "LOW_QUALITY", "ALREADY_MARKED", "SPOOF_DETECTED", "CONFIRMING"
+    message: Optional[str] = None
 
 class FrameProcessRequest(BaseModel):
     image_base64: str

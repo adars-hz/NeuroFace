@@ -319,7 +319,7 @@ def process_camera_frame(
     # immediately purge all pending confirmation hits and lock the session.
     # This guarantees a phone presentation cannot mark attendance!
     if has_spoof_in_frame:
-        frame_tracker.record_spoof(session.id, lockout_seconds=4.0)
+        frame_tracker.record_spoof(session.id, lockout_seconds=2.0)
 
     # Pass 2: Process faces
     for item in evaluated_faces:
@@ -341,7 +341,8 @@ def process_camera_frame(
                 face_results.append(DetectedFaceResult(
                     box=box,
                     confidence=round(detected["score"], 3),
-                    status="SPOOF_DETECTED"
+                    status="SPOOF_DETECTED",
+                    message="PHONE / IMAGE DETECTED - REJECTED"
                 ))
                 continue
             else:
@@ -352,14 +353,7 @@ def process_camera_frame(
                 ))
                 continue
 
-        # If the session is currently locked out due to a phone spoof detected in this frame or recently:
-        if frame_tracker.is_locked_out(session.id):
-            face_results.append(DetectedFaceResult(
-                box=box,
-                confidence=round(detected["score"], 3),
-                status="SPOOF_DETECTED"
-            ))
-            continue
+        # If session is locked out, authentic faces continue to recognition and are held in CONFIRMING state without false spoof rejection
 
         # 2. Quality check
         is_quality_ok, _ = evaluate_face_quality(crop)
@@ -389,11 +383,29 @@ def process_camera_frame(
 
         if matched_id in already_marked_ids:
             status_label = "ALREADY_MARKED"
+            face_message = None
         else:
-            # 5. The student must be seen in consecutive clean frames before we record it.
-            confirmed = frame_tracker.record_hit(session.id, matched_id)
-            if not confirmed:
+            # 5. The student must be seen in consecutive clean frames with verified 3D micro-movement.
+            confirmed, is_live_temporal, temporal_reason = frame_tracker.record_hit(
+                session.id,
+                matched_id,
+                landmarks=detected.get("landmarks"),
+                aligned_crop=aligned
+            )
+
+            if not is_live_temporal:
+                # Static photo or mobile device image detected temporally!
+                # Reject and do NOT mark attendance!
+                face_results.append(DetectedFaceResult(
+                    box=box,
+                    confidence=round(confidence, 4),
+                    status="SPOOF_DETECTED",
+                    message="PHONE / IMAGE DETECTED - REJECTED"
+                ))
+                continue
+            elif not confirmed:
                 status_label = "CONFIRMING"
+                face_message = None
             else:
                 existing_record = db.query(AttendanceRecord).filter(
                     AttendanceRecord.session_id == session.id,
@@ -402,6 +414,7 @@ def process_camera_frame(
 
                 if existing_record:
                     status_label = "ALREADY_MARKED"
+                    face_message = None
                 else:
                     db.add(AttendanceRecord(
                         session_id=session.id,
@@ -415,6 +428,7 @@ def process_camera_frame(
                     already_marked_ids.add(matched_id)
                     newly_marked_count += 1
                     status_label = "MATCHED"
+                    face_message = None
 
         face_results.append(DetectedFaceResult(
             box=box,
@@ -422,7 +436,8 @@ def process_camera_frame(
             student_name=student.full_name,
             register_number=student.register_number,
             confidence=round(confidence, 4),
-            status=status_label
+            status=status_label,
+            message=face_message
         ))
 
     return FrameProcessResponse(

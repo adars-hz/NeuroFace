@@ -302,7 +302,8 @@ const TeacherDashboard = () => {
       <div>
         <h2 className="text-lg font-bold text-slate-900 font-heading mb-3">Recent Attendance Sessions</h2>
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Desktop View Table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm min-w-[640px]">
               <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
                 <tr>
@@ -353,6 +354,54 @@ const TeacherDashboard = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Responsive Cards */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {sessions.length === 0 ? (
+              <div className="p-6 text-center text-xs text-slate-400">
+                No attendance sessions recorded yet.
+              </div>
+            ) : (
+              sessions.slice(0, 8).map((s) => (
+                <div key={s.id} className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">{s.subject_name}</div>
+                      <div className="text-xs text-slate-500 font-medium mt-0.5">
+                        {s.class_name} &bull; <span className="font-mono">{s.slot_name}</span>
+                      </div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      s.status === 'ACTIVE'
+                        ? 'bg-emerald-100 text-emerald-800 animate-pulse'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {s.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-50">
+                    <div className="text-slate-500">
+                      {s.session_date} ({new Date(s.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                    </div>
+                    <div className="font-bold text-teal-700">
+                      {s.present_count} / {s.total_enrolled} Present
+                    </div>
+                  </div>
+
+                  {s.status === 'ACTIVE' && (
+                    <Link
+                      to={`/teacher/live-session/${s.id}`}
+                      className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm mt-1"
+                    >
+                      <Camera className="w-3.5 h-3.5 mr-1" />
+                      <span>Open Live Camera &rarr;</span>
+                    </Link>
+                  )}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

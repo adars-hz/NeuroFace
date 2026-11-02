@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import {
   Camera, CheckCircle2, UserCheck, AlertTriangle, Clock,
-  StopCircle, Users, Sparkles, Shield, UserX, X, RotateCcw
+  StopCircle, Users, Sparkles, Shield, UserX, X, RotateCcw,
+  SwitchCamera
 } from 'lucide-react';
 
 const LiveAttendancePage = () => {
@@ -28,6 +29,7 @@ const LiveAttendancePage = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
 
   // 1. Fetch initial session statistics & prior records
   useEffect(() => {
@@ -63,31 +65,63 @@ const LiveAttendancePage = () => {
     return () => clearInterval(timer);
   }, [timeRemaining]);
 
-  // 3. Initialize Webcam
-  useEffect(() => {
-    const startCamera = async () => {
+  // 3. Initialize Webcam with robust fallback and front/back toggle
+  const startCamera = async (mode = facingMode) => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: { ideal: mode }
+        }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setCameraActive(true);
+        setCameraError('');
+      }
+    } catch (err) {
+      console.warn('Preferred camera mode failed, attempting generic video fallback', err);
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
+          video: true
         });
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          streamRef.current = stream;
+          videoRef.current.srcObject = fallbackStream;
+          streamRef.current = fallbackStream;
           setCameraActive(true);
+          setCameraError('');
         }
-      } catch (err) {
-        console.error('Camera access error', err);
-        setCameraError('Unable to access classroom webcam. Please allow browser camera permissions.');
+      } catch (fallbackErr) {
+        console.error('Camera access error', fallbackErr);
+        setCameraError('Unable to access classroom camera. Please ensure camera permissions are allowed in your browser settings.');
       }
-    };
-    startCamera();
+    }
+  };
+
+  useEffect(() => {
+    startCamera(facingMode);
 
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
     };
   }, []);
+
+  const handleToggleFacingMode = () => {
+    const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(nextMode);
+    startCamera(nextMode);
+  };
 
   // 4. Continuous AI Frame Processing Loop (Every 1.2s)
   useEffect(() => {
@@ -158,8 +192,8 @@ const LiveAttendancePage = () => {
             strokeColor = '#64748b'; // Slate for low quality
             tagText = 'Low Quality / Blur';
           } else if (f.status === 'SPOOF_DETECTED') {
-            strokeColor = '#f43f5e'; // Rose-500 for phone/screen spoof
-            tagText = 'PHONE / SCREEN DETECTED - REJECTED';
+            strokeColor = '#f43f5e'; // Rose-500 for phone/screen/photo spoof
+            tagText = f.message || 'PHONE / IMAGE DETECTED - REJECTED';
           } else if (f.status === 'UNKNOWN') {
             strokeColor = '#ef4444';
             tagText = f.confidence > 0
@@ -232,20 +266,20 @@ const LiveAttendancePage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Session Header & Telemetry Summary Banner */}
-      <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
         <div>
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">
+            <span className="text-[11px] sm:text-xs font-bold text-emerald-700 uppercase tracking-wider">
               Live Facial Recognition Active
             </span>
           </div>
-          <h1 className="text-2xl font-bold font-heading text-slate-900 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold font-heading text-slate-900 mt-1">
             {sessionStats?.subject_name || 'Loading Course...'} ({sessionStats?.subject_code})
           </h1>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mt-1">
             <span><b>Class:</b> {sessionStats?.class_name}</span>
             <span>&bull;</span>
             <span><b>Faculty:</b> {sessionStats?.teacher_name}</span>
@@ -254,18 +288,18 @@ const LiveAttendancePage = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="px-4 py-2.5 bg-slate-900 text-white rounded-2xl flex items-center space-x-3">
-            <Clock className="w-5 h-5 text-teal-400" />
+        <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2.5 sm:gap-3">
+          <div className="px-3.5 py-2 sm:px-4 sm:py-2.5 bg-slate-900 text-white rounded-xl sm:rounded-2xl flex items-center space-x-2.5 sm:space-x-3">
+            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-teal-400" />
             <div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Remaining</div>
-              <div className="text-lg font-mono font-bold leading-none">{formatTimer(timeRemaining)}</div>
+              <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider">Remaining</div>
+              <div className="text-base sm:text-lg font-mono font-bold leading-none">{formatTimer(timeRemaining)}</div>
             </div>
           </div>
 
           <button
             onClick={handleFinish}
-            className="px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-md shadow-rose-600/20 flex items-center space-x-2 transition-colors"
+            className="px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl sm:rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-rose-600/20 flex items-center space-x-2 transition-colors"
           >
             <StopCircle className="w-4 h-4" />
             <span>Complete Session</span>
@@ -274,10 +308,10 @@ const LiveAttendancePage = () => {
       </div>
 
       {cameraError && (
-        <div className="p-5 bg-rose-50 text-rose-800 border border-rose-200 rounded-2xl text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="p-4 sm:p-5 bg-rose-50 text-rose-800 border border-rose-200 rounded-2xl text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div className="space-y-1">
             <div className="font-bold flex items-center space-x-2 text-rose-900">
-              <AlertTriangle className="w-5 h-5 text-rose-600" />
+              <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
               <span>Camera Access Blocked or Not Found</span>
             </div>
             <p className="text-xs text-rose-700">
@@ -286,7 +320,7 @@ const LiveAttendancePage = () => {
           </div>
           <button
             onClick={() => window.location.reload()}
-            className="px-4 py-2 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 transition shrink-0"
+            className="px-4 py-2 bg-rose-600 text-white font-bold text-xs rounded-xl hover:bg-rose-700 transition shrink-0 self-start sm:self-auto"
           >
             Retry Camera Access
           </button>
@@ -294,16 +328,16 @@ const LiveAttendancePage = () => {
       )}
 
       {/* Main Grid: Camera Video Left + Real-time Telemetry Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Camera Preview with Overlay */}
-        <div className="lg:col-span-2 bg-slate-950 rounded-3xl p-4 shadow-xl border border-slate-800 flex flex-col justify-between">
-          <div className="relative rounded-2xl overflow-hidden bg-black flex items-center justify-center min-h-[260px] sm:min-h-[420px]">
+        <div className="lg:col-span-2 bg-slate-950 rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-xl border border-slate-800 flex flex-col justify-between">
+          <div className="relative rounded-xl sm:rounded-2xl overflow-hidden bg-black flex items-center justify-center min-h-[220px] sm:min-h-[380px]">
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="w-full h-auto object-cover rounded-2xl"
+              className="w-full h-auto max-h-[65vh] object-contain rounded-xl sm:rounded-2xl mx-auto"
             />
             <canvas
               ref={canvasRef}
@@ -311,18 +345,32 @@ const LiveAttendancePage = () => {
             />
 
             {/* In-Video HUD Status */}
-            <div className="absolute top-4 left-4 glass px-3 py-1.5 rounded-xl border border-white/20 text-xs font-semibold text-slate-800 flex items-center space-x-2 shadow">
+            <div className="absolute top-3 left-3 glass px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-white/20 text-[10px] sm:text-xs font-semibold text-slate-800 flex items-center space-x-1.5 shadow">
               <Sparkles className="w-3.5 h-3.5 text-teal-600" />
               <span>MTCNN + ArcFace 512-D</span>
             </div>
 
-            <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-white/90">
-              <div className="flex items-center space-x-3 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10">
-                <span className="flex items-center space-x-1.5 text-emerald-400 font-semibold">
+            {/* Camera Flip Button Overlay for Mobile Phones & Tablets */}
+            <button
+              type="button"
+              onClick={handleToggleFacingMode}
+              className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white px-2.5 py-1.5 rounded-xl border border-white/20 text-xs font-semibold flex items-center space-x-1.5 shadow transition-all active:scale-95 z-10"
+              title="Flip Front / Back Camera"
+            >
+              <SwitchCamera className="w-3.5 h-3.5 text-teal-400" />
+              <span className="text-[11px] font-bold">
+                {facingMode === 'environment' ? 'Back' : 'Front'}
+              </span>
+            </button>
+
+            {/* Legend at Bottom */}
+            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-[11px] text-white/90 pointer-events-none">
+              <div className="flex items-center space-x-2.5 bg-black/60 backdrop-blur-md px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-white/10">
+                <span className="flex items-center space-x-1 text-emerald-400 font-semibold">
                   <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
                   <span>Matched</span>
                 </span>
-                <span className="flex items-center space-x-1.5 text-rose-400 font-semibold">
+                <span className="flex items-center space-x-1 text-rose-400 font-semibold">
                   <span className="w-2 h-2 rounded-full bg-rose-400"></span>
                   <span>Unknown</span>
                 </span>
@@ -330,59 +378,59 @@ const LiveAttendancePage = () => {
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-            <span>Camera Pipeline: 1.2s Sampling Frequency</span>
-            <span>Multi-Face Simultaneous Recognition</span>
+          <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Sampling: 1.2s Frequency</span>
+            <span>Multi-Face Detection</span>
           </div>
         </div>
 
-        {/* Live Counters & Attendance Feed Sidebar (Section 25 Specification) */}
-        <div className="space-y-6">
-          {/* Section 25 Four Counters */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Detected</div>
-              <div className="text-2xl font-extrabold text-slate-900 font-heading mt-1">
+        {/* Live Counters & Attendance Feed Sidebar */}
+        <div className="space-y-4 sm:space-y-6">
+          {/* Four Counter Cards */}
+          <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">Detected</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading mt-0.5">
                 {telemetry.total_detected}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Faces in frame</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Faces in frame</div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="text-[11px] font-bold text-teal-600 uppercase tracking-wider">Recognized</div>
-              <div className="text-2xl font-extrabold text-teal-600 font-heading mt-1">
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="text-[10px] sm:text-[11px] font-bold text-teal-600 uppercase tracking-wider">Recognized</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-teal-600 font-heading mt-0.5">
                 {telemetry.recognized_count}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Registered matches</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Registered matches</div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="text-[11px] font-bold text-rose-600 uppercase tracking-wider">Unknown</div>
-              <div className="text-2xl font-extrabold text-rose-600 font-heading mt-1">
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="text-[10px] sm:text-[11px] font-bold text-rose-600 uppercase tracking-wider">Unknown</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-rose-600 font-heading mt-0.5">
                 {telemetry.unknown_count}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Below threshold</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Unregistered</div>
             </div>
 
-            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-              <div className="text-[11px] font-bold text-blue-600 uppercase tracking-wider">Present Count</div>
-              <div className="text-2xl font-extrabold text-blue-600 font-heading mt-1">
+            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+              <div className="text-[10px] sm:text-[11px] font-bold text-blue-600 uppercase tracking-wider">Present Count</div>
+              <div className="text-xl sm:text-2xl font-extrabold text-blue-600 font-heading mt-0.5">
                 {telemetry.present_count}
               </div>
-              <div className="text-[11px] text-slate-400 mt-0.5">Marked present</div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Confirmed present</div>
             </div>
           </div>
 
           {/* Real-time Present Roster List */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-3">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 font-heading text-sm flex items-center space-x-2">
+              <h3 className="font-bold text-slate-900 font-heading text-xs sm:text-sm flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-teal-600" />
                 <span>Marked Present ({presentRecords.length})</span>
               </h3>
             </div>
 
-            <div className="max-h-[260px] overflow-y-auto space-y-2 pr-1">
+            <div className="max-h-[240px] sm:max-h-[280px] overflow-y-auto space-y-2 pr-1">
               {presentRecords.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-400">
                   Waiting for students to appear in camera view...
@@ -391,18 +439,18 @@ const LiveAttendancePage = () => {
                 presentRecords.map((r) => (
                   <div
                     key={r.id}
-                    className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs"
+                    className="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs"
                   >
-                    <div>
-                      <div className="font-bold text-slate-800">{r.student_name}</div>
+                    <div className="min-w-0 pr-2">
+                      <div className="font-bold text-slate-800 truncate">{r.student_name}</div>
                       <div className="font-mono text-[10px] text-slate-500">{r.register_number}</div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 shrink-0">
                       <div className="text-right">
                         <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
                           PRESENT
                         </span>
-                        <div className="text-[10px] text-slate-400 mt-0.5">
+                        <div className="text-[9px] text-slate-400 mt-0.5">
                           {new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                         </div>
                       </div>

@@ -71,20 +71,38 @@ const Sidebar = ({ isOpen, onClose }) => {
       >
         <div className="space-y-6">
           {/* Mobile Drawer Header */}
-          <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-200 md:hidden">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white">
-                <Sparkles className="w-4 h-4" />
+          <div className="pb-3 mb-2 border-b border-slate-200 md:hidden space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white shadow-md shadow-teal-600/20">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <span className="font-bold font-heading text-slate-900 text-base">NeuroFace</span>
               </div>
-              <span className="font-bold font-heading text-slate-900 text-base">NeuroFace</span>
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                aria-label="Close menu"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-              aria-label="Close menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {/* User Profile Pill in Mobile Drawer */}
+            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+                {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-bold text-slate-800 truncate">{user?.full_name || user?.username}</div>
+                <div className="text-[10px] text-teal-700 font-semibold truncate">
+                  {user?.role === 'TEACHER' && user?.is_hod
+                    ? 'HOD / Faculty Member'
+                    : user?.role === 'TEACHER' && user?.is_class_advisor
+                    ? `Class Advisor (${user.advised_class_names?.[0] || 'Active'})`
+                    : user?.role}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* ADMIN NAVIGATION */}

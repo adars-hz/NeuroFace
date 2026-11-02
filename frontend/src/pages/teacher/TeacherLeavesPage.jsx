@@ -116,7 +116,8 @@ const TeacherLeavesPage = () => {
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop View Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm min-w-[700px]">
             <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
               <tr>
@@ -216,7 +217,86 @@ const TeacherLeavesPage = () => {
               )}
             </tbody>
           </table>
+        
+        {/* Mobile Responsive Cards */}
+        <div className="md:hidden divide-y divide-slate-100">
+          {filteredLeaves.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-400">
+              {statusFilter === 'ALL'
+                ? 'No leave applications submitted yet.'
+                : `No ${statusFilter.toLowerCase()} leave applications found.`}
+            </div>
+          ) : (
+            filteredLeaves.map((l) => {
+              const doc = l.documents && l.documents.length > 0 ? l.documents[0] : null;
+              return (
+                <div key={l.id} className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">{l.student_name}</div>
+                      <div className="font-mono text-xs text-slate-500">{l.register_number}</div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                      l.status === 'APPROVED'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : l.status === 'REJECTED'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200 animate-pulse'
+                    }`}>
+                      {l.status}
+                    </span>
+                  </div>
+
+                  <div className="text-xs space-y-1.5">
+                    <div className="flex items-center space-x-1.5 text-slate-700">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold ${
+                        l.day_type === 'HALF_DAY' || l.subject_id
+                          ? 'bg-purple-100 text-purple-800 border border-purple-200'
+                          : 'bg-slate-100 text-slate-700 border border-slate-200'
+                      }`}>
+                        {l.day_type === 'HALF_DAY' || l.subject_id ? 'HALF DAY' : 'FULL DAY'}
+                      </span>
+                      <span className="font-medium truncate">{l.subject_name || 'All Subjects'}</span>
+                    </div>
+
+                    <div className="text-slate-500 font-medium">
+                      {l.start_date} &rarr; {l.end_date}
+                    </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs italic">
+                      "{l.reason}"
+                    </div>
+
+                    {doc && (
+                      <div className="flex items-center justify-between text-[11px] text-teal-700 pt-1">
+                        <span className="truncate max-w-[180px] font-medium">📎 {doc.file_name}</span>
+                        {doc.ocr_result && (
+                          <span className="px-1.5 py-0.2 rounded bg-teal-50 text-teal-700 border border-teal-200 font-mono text-[10px]">
+                            {Math.round(doc.ocr_result.confidence * 100)}% OCR
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setReviewModal(l);
+                      setReviewForm({
+                        status: l.status === 'PENDING' ? 'APPROVED' : l.status,
+                        remarks: l.review_remarks || ''
+                      });
+                    }}
+                    className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm"
+                  >
+                    {l.status === 'PENDING' ? 'Review & Decide \u2192' : 'View Details \u2192'}
+                  </button>
+                </div>
+              );
+            })
+          )}
         </div>
+      </div>
       </div>
 
       {/* Review Modal */}

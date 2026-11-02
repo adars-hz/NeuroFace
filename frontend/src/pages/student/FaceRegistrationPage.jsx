@@ -3,7 +3,7 @@ import api from '../../services/api';
 import {
   Camera, CheckCircle2, AlertCircle, RefreshCw, Sparkles,
   ShieldCheck, ArrowRight, ArrowLeft, ArrowUp, Smile, User, Check, X,
-  Clock, ShieldAlert, Lock, Send, FileText
+  Clock, ShieldAlert, Lock, Send, FileText, SwitchCamera
 } from 'lucide-react';
 
 const POSES = [
@@ -11,6 +11,7 @@ const POSES = [
     id: 'frontal',
     stepNumber: 1,
     title: 'Frontal Focus (Center)',
+    shortLabel: 'Front',
     instruction: 'Look directly at the camera with your head straight and level with a neutral expression.',
     hint: 'Center your eyes and nose inside the oval guide.',
     icon: User,
@@ -20,6 +21,7 @@ const POSES = [
     id: 'right',
     stepNumber: 2,
     title: 'Slight Turn Right (15°)',
+    shortLabel: 'Right',
     instruction: 'Gently turn your head slightly toward your right shoulder.',
     hint: 'Keep the turn subtle so your left eye is still clearly visible.',
     icon: ArrowRight,
@@ -29,6 +31,7 @@ const POSES = [
     id: 'left',
     stepNumber: 3,
     title: 'Slight Turn Left (15°)',
+    shortLabel: 'Left',
     instruction: 'Gently turn your head slightly toward your left shoulder.',
     hint: 'Keep the turn subtle so your right eye is still clearly visible.',
     icon: ArrowLeft,
@@ -38,6 +41,7 @@ const POSES = [
     id: 'tilt_up',
     stepNumber: 4,
     title: 'Slight Tilt Up',
+    shortLabel: 'Tilt Up',
     instruction: 'Slightly elevate your chin while keeping your gaze on the camera.',
     hint: 'This captures jawline and facial angle contours for accurate classroom overhead recognition.',
     icon: ArrowUp,
@@ -47,6 +51,7 @@ const POSES = [
     id: 'expression',
     stepNumber: 5,
     title: 'Natural Expression / Smile',
+    shortLabel: 'Smile',
     instruction: 'Look straight at the camera with your everyday natural relaxed expression.',
     hint: 'Helps ArcFace normalize variations in daily facial emotion.',
     icon: Smile,
@@ -82,6 +87,7 @@ const FaceRegistrationPage = () => {
   const [capturedPoses, setCapturedPoses] = useState({}); // { 0: base64, 1: base64, ... }
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
+  const [facingMode, setFacingMode] = useState('user');
   const [countdown, setCountdown] = useState(null);
   const [liveValidation, setLiveValidation] = useState({ valid: false, message: 'Detecting face...' });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,22 +123,34 @@ const FaceRegistrationPage = () => {
       return;
     }
 
-    const startCamera = async () => {
+    const startCamera = async (mode = facingMode) => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+          video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: { ideal: mode } }
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
           setCameraActive(true);
+          setCameraError('');
         }
       } catch (err) {
-        console.error('Camera error', err);
-        setCameraError('Webcam access was denied. Please allow camera permissions in your browser.');
+        console.warn('Camera mode failed, falling back to any video stream', err);
+        try {
+          const fallback = await navigator.mediaDevices.getUserMedia({ video: true });
+          if (videoRef.current) {
+            videoRef.current.srcObject = fallback;
+            streamRef.current = fallback;
+            setCameraActive(true);
+            setCameraError('');
+          }
+        } catch (fallbackErr) {
+          console.error('Camera error', fallbackErr);
+          setCameraError('Webcam access was denied. Please allow camera permissions in your browser.');
+        }
       }
     };
-    startCamera();
+    startCamera(facingMode);
 
     return () => {
       if (streamRef.current) {
@@ -189,6 +207,29 @@ const FaceRegistrationPage = () => {
       setRequestErrorMsg(err.response?.data?.detail || err.message || 'Failed to submit request.');
     } finally {
       setSubmittingRequest(false);
+    }
+  };
+
+  const handleToggleFacingMode = async () => {
+    const nextMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(nextMode);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setCameraActive(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: { ideal: nextMode } }
+      });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setCameraActive(true);
+        setCameraError('');
+      }
+    } catch (e) {
+      console.warn('Flip camera fallback error', e);
     }
   };
 
@@ -554,7 +595,7 @@ const FaceRegistrationPage = () => {
                       )}
                     </div>
                     <div className="text-[10px] sm:text-[11px] font-bold truncate mt-1">
-                      {p.title.split(' ')[0]}
+                      {p.shortLabel || p.title.split(' ')[0]}
                     </div>
                   </button>
                 );
@@ -591,6 +632,19 @@ const FaceRegistrationPage = () => {
                 muted
                 className="w-full h-auto object-cover rounded-2xl"
               />
+
+                            {/* Camera Flip Button Overlay for Mobile */}
+              <button
+                type="button"
+                onClick={handleToggleFacingMode}
+                className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white px-2.5 py-1.5 rounded-xl border border-white/20 text-xs font-semibold flex items-center space-x-1.5 shadow transition-all active:scale-95 z-10"
+                title="Flip Front / Back Camera"
+              >
+                <SwitchCamera className="w-3.5 h-3.5 text-teal-400" />
+                <span className="text-[11px] font-bold">
+                  {facingMode === 'user' ? 'Front' : 'Back'}
+                </span>
+              </button>
 
               {/* Biometric Guide Oval */}
               {!isSuccess && (
@@ -707,7 +761,7 @@ const FaceRegistrationPage = () => {
                 <span className="text-[11px] text-slate-500">Click any thumbnail to retake</span>
               </div>
 
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-5 gap-1.5 sm:gap-3">
                 {POSES.map((p, idx) => {
                   const frame = capturedPoses[idx];
                   return (
@@ -729,13 +783,13 @@ const FaceRegistrationPage = () => {
                             <Check className="w-3 h-3" />
                           </div>
                           <div className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] font-semibold text-center py-0.5 truncate px-1">
-                            {p.title.split(' ')[0]}
+                            {p.shortLabel || p.title.split(' ')[0]}
                           </div>
                         </>
                       ) : (
                         <div className="text-center p-1">
                           <div className="text-[10px] font-bold text-slate-400">{idx + 1}</div>
-                          <div className="text-[9px] text-slate-400 truncate">{p.title.split(' ')[0]}</div>
+                          <div className="text-[9px] text-slate-400 truncate">{p.shortLabel || p.title.split(' ')[0]}</div>
                         </div>
                       )}
                     </div>
