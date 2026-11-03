@@ -12,12 +12,17 @@ const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const performLogin = async (u, p) => {
+    const cleanUser = (u || '').trim();
+    const cleanPass = (p || '').trim();
+    if (!cleanUser || !cleanPass) {
+      setError('Please enter both username and password.');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
-      const user = await login(username, password);
+      const user = await login(cleanUser, cleanPass);
       if (user.role === 'ADMIN') navigate('/admin');
       else if (user.role === 'TEACHER') navigate('/teacher');
       else if (user.role === 'STUDENT') navigate('/student');
@@ -34,9 +39,15 @@ const LoginPage = () => {
     }
   };
 
-  const quickLogin = (u, p) => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    await performLogin(username, password);
+  };
+
+  const quickLogin = async (u, p) => {
     setUsername(u);
     setPassword(p);
+    await performLogin(u, p);
   };
 
   return (
