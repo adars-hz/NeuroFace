@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 sqlalchemy>=2.0.0
@@ -15,9 +16,8 @@ python-dotenv>=1.0.1
 reportlab>=4.2.0
 openpyxl>=3.1.5
 email-validator>=2.0.0
-torch>=2.0.0
-torchvision>=0.15.0
+torch>=2.0.0+cpu
+torchvision>=0.15.0+cpu
 facenet-pytorch>=2.5.3
 pytesseract>=0.3.10
 onnxruntime>=1.16.0
-gradio>=4.0.0
