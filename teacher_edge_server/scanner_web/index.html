@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NeuroFace Mobile Attendance Scanner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+    .scan-guide {
+      border: 3px dashed rgba(16, 185, 129, 0.7);
+      border-radius: 50% / 45%;
+      box-shadow: 0 0 0 9999px rgba(10, 15, 30, 0.75);
+    }
+    @keyframes pulse-border {
+      0%, 100% { border-color: rgba(16, 185, 129, 0.9); }
+      50% { border-color: rgba(59, 130, 246, 0.9); }
+    }
+    .scan-active { animation: pulse-border 2s infinite ease-in-out; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between overflow-x-hidden select-none">
+
+  <!-- Top App Bar -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 px-4 py-3 sticky top-0 z-30 flex items-center justify-between">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-teal-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+        <i data-lucide="scan-face" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="font-extrabold text-sm tracking-tight text-white flex items-center gap-1.5">
+          NeuroFace <span class="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">Edge Cam</span>
+        </h1>
+        <p id="headerStatus" class="text-[10px] text-slate-400 font-medium">Ready to pair with teacher</p>
+      </div>
+    </div>
+    <div id="connectionPill" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-[11px] font-semibold text-emerald-400">
+      <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span id="pillText">Linked</span>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 flex flex-col items-center justify-center p-4 max-w-md mx-auto w-full">
+
+    <!-- STEP 1: Enter Session PIN Screen -->
+    <div id="pairScreen" class="w-full bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl backdrop-blur-xl">
+      <div class="text-center space-y-2 mb-6">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400 shadow-inner">
+          <i data-lucide="qr-code" class="w-7 h-7"></i>
+        </div>
+        <h2 class="text-xl font-bold text-white tracking-tight">Enter Attendance PIN</h2>
+        <p class="text-xs text-slate-400 leading-relaxed">
+          Ask your teacher for the 6-digit session code shown on their laptop screen.
+        </p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Session Code</label>
+          <input
+            id="sessionCodeInput"
+            type="text"
+            maxlength="8"
+            placeholder="e.g. 581 294"
+            class="w-full text-center tracking-[0.3em] font-mono text-2xl font-extrabold bg-slate-950 border border-slate-700 focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 rounded-2xl py-3.5 text-teal-300 placeholder:text-slate-600 outline-none uppercase transition-all"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="characters"
+          />
+        </div>
+
+        <div id="pairError" class="hidden p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-medium text-center"></div>
+
+        <button
+          id="btnConnect"
+          onclick="connectToSession()"
+          class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-teal-500 to-indigo-600 hover:from-teal-400 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-teal-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+        >
+          <span>Connect to Teacher's Laptop</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+
+        <div class="pt-4 border-t border-slate-800/80 text-center">
+          <p class="text-[11px] text-slate-500 flex items-center justify-center gap-1.5">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-teal-400"></i>
+            <span>Local AI Edge Processing • Zero Cloud Latency</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEP 2: Active Camera Viewfinder Screen -->
+    <div id="cameraScreen" class="hidden w-full flex-col items-center">
+      
+      <!-- Session Bar Info -->
+      <div class="w-full bg-slate-900/80 border border-slate-800 px-4 py-2.5 rounded-2xl mb-3 flex items-center justify-between backdrop-blur-md">
+        <div>
+          <div id="classNameBadge" class="text-xs font-bold text-white flex items-center gap-1.5">
+            <span>MCA S3 (2025-2026)</span>
+          </div>
+          <div id="teacherNameBadge" class="text-[10px] text-teal-400 font-medium">Faculty: Prof. Rahul Verma</div>
+        </div>
+        <div class="text-right">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Marked Today</div>
+          <div id="sessionCountBadge" class="text-xs font-extrabold text-emerald-400 font-mono">0 Students</div>
+        </div>
+      </div>
+
+      <!-- Camera Feed Wrapper -->
+      <div class="relative w-full aspect-[3/4] max-h-[65vh] rounded-3xl overflow-hidden bg-black border-2 border-slate-800 shadow-2xl flex items-center justify-center">
+        <!-- Live Video Element -->
+        <video id="webcamVideo" autoplay playsinline muted class="w-full h-full object-cover transform scale-x-[-1]"></video>
+
+        <!-- Hidden canvas for edge frame capture -->
+        <canvas id="captureCanvas" class="hidden"></canvas>
+
+        <!-- Centered Head Oval Silhouette -->
+        <div class="scan-guide scan-active absolute w-[62%] h-[68%] pointer-events-none flex items-center justify-center">
+          <div class="text-center px-2">
+            <div id="guideText" class="text-[11px] font-bold text-white/90 drop-shadow-md bg-black/50 px-2 py-0.5 rounded-full backdrop-blur-sm">
+              Position face here
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Camera Flip Button -->
+        <button
+          onclick="toggleCameraFacing()"
+          class="absolute top-3 right-3 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white px-2.5 py-1.5 rounded-xl border border-white/20 text-[11px] font-bold flex items-center gap-1.5 shadow active:scale-95 z-20"
+        >
+          <i data-lucide="switch-camera" class="w-3.5 h-3.5 text-teal-400"></i>
+          <span id="facingLabel">Front</span>
+        </button>
+
+        <!-- Live Scanning Pill Indicator -->
+        <div class="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-[10px] font-bold text-teal-300 z-20">
+          <span class="w-2 h-2 rounded-full bg-teal-400 animate-ping"></span>
+          <span>PASS PHONE SCAN</span>
+        </div>
+
+        <!-- Pop-up Success Banner on Verification (Co-presence feedback) -->
+        <div id="successOverlay" class="hidden absolute inset-0 bg-emerald-950/95 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center transition-all">
+          <div class="w-20 h-20 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center text-emerald-400 mb-3 animate-bounce">
+            <i data-lucide="check" class="w-10 h-10 stroke-[3]"></i>
+          </div>
+          <span class="text-xs uppercase font-extrabold tracking-widest text-emerald-300">Attendance Recorded</span>
+          <h3 id="matchedStudentName" class="text-2xl font-extrabold text-white mt-1">Arun Kumar</h3>
+          <p id="matchedRegNo" class="text-xs font-mono text-emerald-400 font-bold mt-0.5">MCA2301</p>
+          
+          <div class="mt-6 w-full max-w-xs p-3.5 rounded-2xl bg-black/40 border border-emerald-500/40 shadow-inner">
+            <p class="text-xs font-extrabold text-emerald-300 flex items-center justify-center gap-1.5">
+              <span>Pass phone to next student</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </p>
+            <p id="cooldownTimer" class="text-[10px] text-emerald-400/80 mt-1">Priming next student in 2s...</p>
+          </div>
+        </div>
+
+        <!-- Warning Toast for Spoof / Blur / Object -->
+        <div id="statusToast" class="hidden absolute bottom-4 inset-x-4 mx-auto max-w-xs bg-slate-900/90 border border-amber-500/40 text-amber-300 px-3.5 py-2 rounded-2xl text-[11px] font-semibold text-center backdrop-blur-md shadow-lg z-20 flex items-center justify-center gap-1.5">
+          <i data-lucide="alert-circle" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+          <span id="toastMsg">Looking for face...</span>
+        </div>
+      </div>
+
+      <!-- Action Button Controls -->
+      <div class="w-full mt-3 flex items-center justify-between text-xs text-slate-400">
+        <button onclick="disconnectSession()" class="text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>Disconnect</span>
+        </button>
+        <span class="text-[11px] text-slate-500">Frequency: 1.0s Edge AI</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer Info -->
+  <footer class="py-2.5 px-4 text-center text-[10px] text-slate-500 border-t border-slate-900 bg-slate-950/80">
+    NeuroFace Local Edge • Encrypted Biometric Matching
+  </footer>
+
+  <script>
+    lucide.createIcons();
+
+    let currentSessionCode = '';
+    let currentSessionData = null;
+    let cameraFacing = 'user'; // front selfie camera default
+    let videoStream = null;
+    let isProcessing = false;
+    let cooldownActive = false;
+    let scanInterval = null;
+
+    // Auto-fill code from URL query param if opened via QR code (e.g. ?code=581294)
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const codeFromUrl = urlParams.get('code');
+      if (codeFromUrl) {
+        document.getElementById('sessionCodeInput').value = codeFromUrl.trim();
+        connectToSession();
+      }
+    });
+
+    // 1. Connect and Pair with Teacher's Laptop Server
+    async function connectToSession() {
+      const input = document.getElementById('sessionCodeInput').value.trim().toUpperCase();
+      const errBox = document.getElementById('pairError');
+      errBox.classList.add('hidden');
+
+      if (!input || input.length < 4) {
+        errBox.textContent = 'Please enter a valid session code.';
+        errBox.classList.remove('hidden');
+        return;
+      }
+
+      document.getElementById('btnConnect').disabled = true;
+      document.getElementById('btnConnect').innerHTML = '<span class="animate-spin mr-2">◌</span> Verifying session...';
+
+      try {
+        const res = await fetch(`/api/edge/session/status/${input}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.detail || 'Session code not found or expired.');
+        }
+
+        currentSessionCode = input;
+        currentSessionData = data;
+
+        // Populate session info
+        document.getElementById('classNameBadge').textContent = `${data.class_name} • ${data.subject_name}`;
+        document.getElementById('teacherNameBadge').textContent = `Faculty: ${data.teacher_name}`;
+        document.getElementById('sessionCountBadge').textContent = `${data.present_count} Marked`;
+        document.getElementById('headerStatus').textContent = `${data.class_name} Session Active`;
+
+        document.getElementById('connectionPill').classList.remove('hidden');
+        document.getElementById('connectionPill').classList.add('flex');
+        document.getElementById('pillText').textContent = 'Live Linked';
+
+        // Switch screens
+        document.getElementById('pairScreen').classList.add('hidden');
+        document.getElementById('cameraScreen').classList.remove('hidden');
+        document.getElementById('cameraScreen').classList.add('flex');
+
+        startCamera();
+      } catch (err) {
+        errBox.textContent = err.message || 'Could not connect to teacher laptop.';
+        errBox.classList.remove('hidden');
+      } finally {
+        document.getElementById('btnConnect').disabled = false;
+        document.getElementById('btnConnect').innerHTML = '<span>Connect to Teacher\'s Laptop</span><i data-lucide="arrow-right" class="w-4 h-4 ml-1"></i>';
+        lucide.createIcons();
+      }
+    }
+
+    // 2. Camera Stream Manager
+    async function startCamera() {
+      if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+      }
+
+      const video = document.getElementById('webcamVideo');
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: cameraFacing },
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          },
+          audio: false
+        });
+        video.srcObject = stream;
+        videoStream = stream;
+
+        // Apply mirror effect only for front camera
+        if (cameraFacing === 'user') {
+          video.classList.add('scale-x-[-1]');
+        } else {
+          video.classList.remove('scale-x-[-1]');
+        }
+
+        // Start periodic frame transmission (Every 1.0s)
+        if (!scanInterval) {
+          scanInterval = setInterval(captureAndSendFrame, 1000);
+        }
+      } catch (err) {
+        alert('Camera access denied. Please allow camera permissions in your mobile browser.');
+      }
+    }
+
+    function toggleCameraFacing() {
+      cameraFacing = cameraFacing === 'user' ? 'environment' : 'user';
+      document.getElementById('facingLabel').textContent = cameraFacing === 'user' ? 'Front' : 'Back';
+      startCamera();
+    }
+
+    // 3. Capture Frame and Transmit to Teacher's Laptop Server
+    async function captureAndSendFrame() {
+      if (isProcessing || cooldownActive) return;
+      const video = document.getElementById('webcamVideo');
+      if (!video || video.videoWidth === 0) return;
+
+      isProcessing = true;
+      const canvas = document.getElementById('captureCanvas');
+      canvas.width = 480;
+      canvas.height = 360;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const base64Img = canvas.toDataURL('image/jpeg', 0.82);
+
+      try {
+        const res = await fetch(`/api/edge/session/verify-face/${currentSessionCode}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image_base64: base64Img })
+        });
+
+        const data = await res.json();
+        handleServerResponse(data);
+      } catch (err) {
+        showToast('Connecting to teacher laptop...', 'text-amber-400');
+      } finally {
+        isProcessing = false;
+      }
+    }
+
+    // 4. Handle Real-Time Edge AI Match
+    function handleServerResponse(data) {
+      if (!data) return;
+
+      if (data.status === 'MATCHED' && data.newly_marked) {
+        // Trigger high feedback
+        triggerAttendanceCelebration(data.student_name, data.register_number, data.total_present);
+      } else if (data.status === 'ALREADY_MARKED') {
+        showToast(`Already marked present: ${data.student_name}`, 'text-teal-400');
+      } else if (data.status === 'SPOOF_DETECTED') {
+        showToast('Screen / Photo Rejected - Real Face Required', 'text-rose-400');
+      } else if (data.status === 'LOW_QUALITY') {
+        showToast('Low lighting or blurry - face camera directly', 'text-amber-300');
+      } else if (data.status === 'UNKNOWN') {
+        showToast('Unregistered face - please check enrollment', 'text-slate-400');
+      } else if (data.status === 'NO_FACE') {
+        hideToast();
+      }
+    }
+
+    // 5. Success Celebration for Physical Mobile Hand-off
+    function triggerAttendanceCelebration(name, regNo, totalCount) {
+      cooldownActive = true;
+      document.getElementById('sessionCountBadge').textContent = `${totalCount} Marked`;
+      document.getElementById('matchedStudentName').textContent = name;
+      document.getElementById('matchedRegNo').textContent = regNo;
+
+      const overlay = document.getElementById('successOverlay');
+      overlay.classList.remove('hidden');
+      overlay.classList.add('flex');
+
+      // Audio Chime
+      playSuccessChime();
+
+      // Mobile Haptics
+      if (navigator.vibrate) {
+        navigator.vibrate([150, 60, 150]);
+      }
+
+      // 2.5 second cooldown before priming next student
+      let seconds = 2;
+      const timerEl = document.getElementById('cooldownTimer');
+      timerEl.textContent = `Priming next student in ${seconds}s...`;
+
+      const countdown = setInterval(() => {
+        seconds--;
+        if (seconds > 0) {
+          timerEl.textContent = `Priming next student in ${seconds}s...`;
+        } else {
+          clearInterval(countdown);
+          overlay.classList.add('hidden');
+          overlay.classList.remove('flex');
+          cooldownActive = false;
+        }
+      }, 1000);
+    }
+
+    function playSuccessChime() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const now = ctx.currentTime;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, now); // D5
+          osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        }
+      } catch (e) {}
+    }
+
+    function showToast(msg, colorClass = 'text-amber-300') {
+      const toast = document.getElementById('statusToast');
+      const text = document.getElementById('toastMsg');
+      text.className = colorClass;
+      text.textContent = msg;
+      toast.classList.remove('hidden');
+      toast.classList.add('flex');
+    }
+
+    function hideToast() {
+      const toast = document.getElementById('statusToast');
+      toast.classList.add('hidden');
+      toast.classList.remove('flex');
+    }
+
+    function disconnectSession() {
+      if (!confirm('Disconnect from this attendance session?')) return;
+      if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+      }
+      if (scanInterval) {
+        clearInterval(scanInterval);
+        scanInterval = null;
+      }
+      currentSessionCode = '';
+      document.getElementById('cameraScreen').classList.add('hidden');
+      document.getElementById('pairScreen').classList.remove('hidden');
+      document.getElementById('connectionPill').classList.add('hidden');
+      document.getElementById('headerStatus').textContent = 'Ready to pair with teacher';
+    }
+  </script>
+</body>
+</html>
