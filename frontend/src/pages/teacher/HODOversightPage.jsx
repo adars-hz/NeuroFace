@@ -65,16 +65,16 @@ const HODOversightPage = () => {
         </div>
       </div>
 
-      <div className="p-6 bg-teal-50/60 rounded-2xl border border-teal-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 bg-neutral-100 rounded-2xl border border-neutral-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="font-bold text-teal-900 font-heading text-sm">Student Face Re-Registration Authorizations</h3>
-          <p className="text-xs text-teal-800 mt-0.5">
+          <h3 className="font-bold text-black font-heading text-sm">Student Face Re-Registration Authorizations</h3>
+          <p className="text-xs text-neutral-600 mt-0.5">
             Students whose facial biometrics are already enrolled require HOD or Admin approval to re-register their template.
           </p>
         </div>
         <Link
           to="/admin/approvals?tab=face"
-          className="px-4 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 transition-colors shadow-sm whitespace-nowrap text-center"
+          className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-neutral-800 transition-colors shadow whitespace-nowrap text-center"
         >
           Review Face Requests &rarr;
         </Link>

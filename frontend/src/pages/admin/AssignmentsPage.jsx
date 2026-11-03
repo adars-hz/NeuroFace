@@ -107,41 +107,41 @@ const AssignmentsPage = () => {
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm min-w-[600px]">
-            <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
-              <tr>
-                <th className="px-6 py-3.5">Faculty Member</th>
-                <th className="px-6 py-3.5">Assigned Subject</th>
-                <th className="px-6 py-3.5">Target Class</th>
-                <th className="px-6 py-3.5 text-right">Revoke</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {assignments.map((a) => (
-                <tr key={a.id} className="hover:bg-slate-50">
-                  <td className="px-6 py-4 font-semibold text-slate-900">
-                    <div>{a.teacher_name}</div>
-                    <div className="text-xs font-mono text-slate-500">{a.teacher_code}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-teal-700">{a.subject_name}</div>
-                    <div className="text-xs font-mono text-slate-500">{a.subject_code}</div>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-medium text-slate-700">
-                    {a.class_name}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleDelete(a.id)}
-                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      title="Revoke Assignment"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
+              <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
+                <tr>
+                  <th className="px-6 py-3.5">Faculty Member</th>
+                  <th className="px-6 py-3.5">Assigned Subject</th>
+                  <th className="px-6 py-3.5">Target Class</th>
+                  <th className="px-6 py-3.5 text-right">Revoke</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {assignments.map((a) => (
+                  <tr key={a.id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-semibold text-slate-900">
+                      <div>{a.teacher_name}</div>
+                      <div className="text-xs font-mono text-slate-500">{a.teacher_code}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-teal-700">{a.subject_name}</div>
+                      <div className="text-xs font-mono text-slate-500">{a.subject_code}</div>
+                    </td>
+                    <td className="px-6 py-4 text-xs font-medium text-slate-700">
+                      {a.class_name}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        onClick={() => handleDelete(a.id)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Revoke Assignment"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -196,7 +196,7 @@ const AssignmentsPage = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 shadow-sm transition-colors"
+              className="w-full py-2.5 bg-black text-white rounded-xl font-semibold hover:bg-neutral-800 shadow transition-colors"
             >
               Authorize Assignment
             </button>

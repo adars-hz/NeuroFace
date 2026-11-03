@@ -165,7 +165,7 @@ const StartSessionPage = () => {
           <button
             type="submit"
             disabled={loading || assignments.length === 0}
-            className="w-full py-3.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold flex items-center justify-center space-x-2 shadow-md shadow-teal-600/20 transition-all disabled:opacity-50"
+            className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white rounded-xl font-bold flex items-center justify-center space-x-2 shadow transition-all disabled:opacity-50"
           >
             <Play className="w-4 h-4" />
             <span>{loading ? 'Initializing AI Camera...' : 'Launch Live Camera Attendance'}</span>

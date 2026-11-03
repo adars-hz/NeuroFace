@@ -41,23 +41,23 @@ const FineRulesPage = () => {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 font-heading">Institutional Rules & Fine Configuration</h1>
-        <p className="text-slate-600 text-sm">Configure minimum attendance thresholds, condonation limits, and fine fees</p>
+        <h1 className="text-2xl font-bold text-black font-heading">Institutional Rules & Fine Configuration</h1>
+        <p className="text-neutral-600 text-sm">Configure minimum attendance thresholds, condonation limits, and fine fees</p>
       </div>
 
       {msg && (
-        <div className="p-3.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold flex items-center space-x-2">
-          <CheckCircle2 className="w-4 h-4" />
+        <div className="p-3.5 bg-neutral-100 text-black border border-neutral-300 rounded-xl text-xs font-semibold flex items-center space-x-2">
+          <CheckCircle2 className="w-4 h-4 text-black" />
           <span>{msg}</span>
         </div>
       )}
 
       {/* Policy Card */}
-      <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+      <div className="bg-white p-8 rounded-2xl border border-neutral-200 shadow-sm space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6 text-sm">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-2">
                 Direct Exam Eligibility (%)
               </label>
               <div className="relative">
@@ -69,15 +69,15 @@ const FineRulesPage = () => {
                   required
                   value={rule.min_eligible_pct}
                   onChange={(e) => setRule({ ...rule, min_eligible_pct: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-lg font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl text-lg font-bold text-black focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">%</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">%</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1.5">Project specification defaults to 85%.</p>
+              <p className="text-[11px] text-neutral-500 mt-1.5">Project specification defaults to 85%.</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-2">
                 Condonation Min Floor (%)
               </label>
               <div className="relative">
@@ -89,15 +89,15 @@ const FineRulesPage = () => {
                   required
                   value={rule.condonation_min_pct}
                   onChange={(e) => setRule({ ...rule, condonation_min_pct: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-lg font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl text-lg font-bold text-black focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">%</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">%</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1.5">Students below this percentage are detained.</p>
+              <p className="text-[11px] text-neutral-500 mt-1.5">Students below this percentage are detained.</p>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-neutral-700 uppercase tracking-wider mb-2">
                 Condonation Fine Amount (₹)
               </label>
               <div className="relative">
@@ -108,31 +108,31 @@ const FineRulesPage = () => {
                   required
                   value={rule.fine_amount}
                   onChange={(e) => setRule({ ...rule, fine_amount: parseFloat(e.target.value) })}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl text-lg font-bold text-slate-900 focus:ring-2 focus:ring-teal-500"
+                  className="w-full px-4 py-3 border border-neutral-300 rounded-xl text-lg font-bold text-black focus:outline-none focus:ring-2 focus:ring-black"
                 />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">₹</span>
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 font-bold">₹</span>
               </div>
-              <p className="text-[11px] text-slate-500 mt-1.5">Flat fine levied for condonation bracket.</p>
+              <p className="text-[11px] text-neutral-500 mt-1.5">Flat fine levied for condonation bracket.</p>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-2">
-            <div className="font-bold flex items-center space-x-1.5 text-slate-900">
-              <Info className="w-4 h-4 text-teal-600" />
+          <div className="p-4 rounded-xl bg-neutral-50 border border-neutral-200 text-xs text-neutral-700 space-y-2">
+            <div className="font-bold flex items-center space-x-1.5 text-black">
+              <Info className="w-4 h-4 text-black" />
               <span>Current Formula & Bracket Evaluation</span>
             </div>
-            <ul className="list-disc list-inside space-y-1 text-slate-600">
+            <ul className="list-disc list-inside space-y-1 text-neutral-600">
               <li>
-                <span className="font-semibold text-emerald-700">Attendance &ge; {rule.min_eligible_pct}%:</span> Direct Exam Eligibility (No fine required).
+                <span className="font-semibold text-black">Attendance &ge; {rule.min_eligible_pct}%:</span> Direct Exam Eligibility (No fine required).
               </li>
               <li>
-                <span className="font-semibold text-amber-700">{rule.condonation_min_pct}% &le; Attendance &lt; {rule.min_eligible_pct}%:</span> Eligible for Exam upon payment of ₹{rule.fine_amount} fine.
+                <span className="font-semibold text-black">{rule.condonation_min_pct}% &le; Attendance &lt; {rule.min_eligible_pct}%:</span> Eligible for Exam upon payment of ₹{rule.fine_amount} fine.
               </li>
               <li>
-                <span className="font-semibold text-rose-700">Attendance &lt; {rule.condonation_min_pct}%:</span> Detained (Not eligible for semester examination).
+                <span className="font-semibold text-neutral-700">Attendance &lt; {rule.condonation_min_pct}%:</span> Detained (Not eligible for semester examination).
               </li>
               <li>
-                <span className="font-semibold text-blue-700">HOD Medical Waiver:</span> Increases effective attendance classes without deleting original lecture logs: <code className="bg-slate-200 px-1 py-0.5 rounded font-mono">min(100, (Present + Waived) / Total * 100)</code>.
+                <span className="font-semibold text-black">HOD Medical Waiver:</span> Increases effective attendance classes without deleting original lecture logs: <code className="bg-neutral-200 text-black px-1 py-0.5 rounded font-mono">min(100, (Present + Waived) / Total * 100)</code>.
               </li>
             </ul>
           </div>
@@ -140,7 +140,7 @@ const FineRulesPage = () => {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-6 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 flex items-center space-x-2 shadow-sm transition-colors"
+              className="px-6 py-3 bg-black text-white rounded-xl font-bold hover:bg-neutral-800 flex items-center space-x-2 shadow transition-colors"
             >
               <Save className="w-4 h-4" />
               <span>Save Institutional Policy</span>

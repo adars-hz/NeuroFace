@@ -8,6 +8,7 @@ import {
   FileCheck2, ShieldAlert, Sliders, History, Database, Award,
   Sparkles, X
 } from 'lucide-react';
+import ThemeToggle from '../common/ThemeToggle';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const { user } = useAuth();
@@ -42,8 +43,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const linkClass = ({ isActive }) =>
     `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
       isActive
-        ? 'bg-teal-600 text-white shadow-md shadow-teal-600/20 font-semibold'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        ? 'bg-black text-white shadow-sm font-semibold'
+        : 'text-neutral-600 hover:bg-neutral-100 hover:text-black'
     }`;
 
   return (
@@ -51,7 +52,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Mobile Drawer Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden transition-opacity"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -61,7 +62,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       <aside
         className={`
           fixed md:static inset-y-0 left-0 z-50
-          w-72 md:w-64 bg-white border-r border-slate-200
+          w-72 md:w-64 bg-white border-r border-neutral-200
           flex flex-col justify-between p-4
           min-h-screen md:min-h-[calc(100vh-4rem)]
           transform transition-transform duration-300 ease-in-out
@@ -71,30 +72,30 @@ const Sidebar = ({ isOpen, onClose }) => {
       >
         <div className="space-y-6">
           {/* Mobile Drawer Header */}
-          <div className="pb-3 mb-2 border-b border-slate-200 md:hidden space-y-3">
+          <div className="pb-3 mb-2 border-b border-neutral-200 md:hidden space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-lg bg-teal-600 flex items-center justify-center text-white shadow-md shadow-teal-600/20">
-                  <Sparkles className="w-4 h-4" />
+                <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white shadow-sm">
+                  <Sparkles className="w-4 h-4 text-white" />
                 </div>
-                <span className="font-bold font-heading text-slate-900 text-base">NeuroFace</span>
+                <span className="font-bold font-heading text-black text-base">NeuroFace</span>
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                className="p-1.5 rounded-lg text-neutral-400 hover:text-black hover:bg-neutral-100 transition-colors"
                 aria-label="Close menu"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             {/* User Profile Pill in Mobile Drawer */}
-            <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+            <div className="p-2.5 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-full bg-black text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
                 {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-bold text-slate-800 truncate">{user?.full_name || user?.username}</div>
-                <div className="text-[10px] text-teal-700 font-semibold truncate">
+                <div className="text-xs font-bold text-neutral-900 truncate">{user?.full_name || user?.username}</div>
+                <div className="text-[10px] text-neutral-600 font-semibold truncate">
                   {user?.role === 'TEACHER' && user?.is_hod
                     ? 'HOD / Faculty Member'
                     : user?.role === 'TEACHER' && user?.is_class_advisor
@@ -108,7 +109,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* ADMIN NAVIGATION */}
           {role === 'ADMIN' && (
             <div>
-              <div className="px-3 text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+              <div className="px-3 text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                 System Administration
               </div>
               <nav className="space-y-1">
@@ -141,10 +142,10 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <span>Audit Logs</span>
                 </NavLink>
                 <NavLink to="/admin/approvals" className={linkClass} onClick={handleLinkClick}>
-                  <ShieldAlert className="w-4 h-4 text-amber-500" />
+                  <ShieldAlert className="w-4 h-4" />
                   <span className="flex-1">Approvals Queue</span>
                   {pendingCounts.total > 0 && (
-                    <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+                    <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-black text-white">
                       {pendingCounts.total}
                     </span>
                   )}
@@ -156,7 +157,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* TEACHER NAVIGATION */}
           {role === 'TEACHER' && (
             <div>
-              <div className="px-3 text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+              <div className="px-3 text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                 Faculty Portal
               </div>
               <nav className="space-y-1">
@@ -172,7 +173,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <FileText className="w-4 h-4" />
                   <span className="flex-1">Review Leaves & OCR</span>
                   {pendingLeavesCount > 0 && (
-                    <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-amber-500 text-white animate-pulse">
+                    <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-extrabold bg-black text-white">
                       {pendingLeavesCount}
                     </span>
                   )}
@@ -185,23 +186,23 @@ const Sidebar = ({ isOpen, onClose }) => {
 
               {/* CLASS ADVISOR ELEVATED TOOLS */}
               {isAdvisor && !isHod && (
-                <div className="mt-6 pt-5 border-t border-slate-200">
-                  <div className="px-3 flex items-center justify-between text-xs font-bold text-teal-800 uppercase tracking-wider mb-2">
+                <div className="mt-6 pt-5 border-t border-neutral-200">
+                  <div className="px-3 flex items-center justify-between text-xs font-bold text-neutral-700 uppercase tracking-wider mb-2">
                     <div className="flex items-center space-x-1.5">
-                      <Award className="w-3.5 h-3.5 text-teal-600" />
+                      <Award className="w-3.5 h-3.5 text-black" />
                       <span>Class Advisor</span>
                     </div>
-                    <span className="text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-1.5 py-0.5 rounded-md font-semibold truncate max-w-[100px]" title={advisedClasses.join(', ')}>
+                    <span className="text-[10px] bg-neutral-100 text-black border border-neutral-300 px-1.5 py-0.5 rounded-md font-semibold truncate max-w-[100px]" title={advisedClasses.join(', ')}>
                       {advisedClasses[0] || 'Advisor'}
                     </span>
                   </div>
                   <nav className="space-y-1">
                     <NavLink to="/teacher/assignments" className={linkClass} onClick={handleLinkClick}>
-                      <CheckSquare className="w-4 h-4 text-teal-600" />
+                      <CheckSquare className="w-4 h-4 text-black" />
                       <span>Assign Teachers & Slots</span>
                     </NavLink>
                     <NavLink to="/teacher/student-reports" className={linkClass} onClick={handleLinkClick}>
-                      <FileCheck2 className="w-4 h-4 text-teal-600" />
+                      <FileCheck2 className="w-4 h-4 text-black" />
                       <span>Download Class Reports</span>
                     </NavLink>
                   </nav>
@@ -210,9 +211,9 @@ const Sidebar = ({ isOpen, onClose }) => {
 
               {/* HOD CONDITIONAL ELEVATION SECTION */}
               {isHod && (
-                <div className="mt-6 pt-5 border-t border-slate-200">
-                  <div className="px-3 flex items-center space-x-2 text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">
-                    <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                <div className="mt-6 pt-5 border-t border-neutral-200">
+                  <div className="px-3 flex items-center space-x-2 text-xs font-bold text-black uppercase tracking-wider mb-2">
+                    <ShieldAlert className="w-3.5 h-3.5 text-black" />
                     <span>HOD Admin Tools</span>
                   </div>
                   <nav className="space-y-1">
@@ -225,19 +226,19 @@ const Sidebar = ({ isOpen, onClose }) => {
                       <span>Approve Medical Waivers</span>
                     </NavLink>
                     <NavLink to="/admin/teachers" className={linkClass} onClick={handleLinkClick}>
-                      <Users className="w-4 h-4 text-teal-600" />
+                      <Users className="w-4 h-4 text-black" />
                       <span>Manage Teachers</span>
                     </NavLink>
                     <NavLink to="/admin/students" className={linkClass} onClick={handleLinkClick}>
-                      <GraduationCap className="w-4 h-4 text-teal-600" />
+                      <GraduationCap className="w-4 h-4 text-black" />
                       <span>Manage Students</span>
                     </NavLink>
                     <NavLink to="/admin/academic" className={linkClass} onClick={handleLinkClick}>
-                      <BookOpen className="w-4 h-4 text-teal-600" />
+                      <BookOpen className="w-4 h-4 text-black" />
                       <span>Academic Setup</span>
                     </NavLink>
                     <NavLink to="/admin/assignments" className={linkClass} onClick={handleLinkClick}>
-                      <CheckSquare className="w-4 h-4 text-teal-600" />
+                      <CheckSquare className="w-4 h-4 text-black" />
                       <span>Teacher Assignments</span>
                     </NavLink>
                   </nav>
@@ -249,7 +250,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* STUDENT NAVIGATION */}
           {role === 'STUDENT' && (
             <div>
-              <div className="px-3 text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">
+              <div className="px-3 text-xs font-bold text-neutral-500 uppercase tracking-wider mb-2">
                 Student Portal
               </div>
               <nav className="space-y-1">
@@ -258,7 +259,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <span>Overview</span>
                 </NavLink>
                 <NavLink to="/student/register-face" className={linkClass} onClick={handleLinkClick}>
-                  <Camera className="w-4 h-4 text-teal-600" />
+                  <Camera className="w-4 h-4 text-black" />
                   <span>Face Biometric Setup</span>
                 </NavLink>
                 <NavLink to="/student/my-attendance" className={linkClass} onClick={handleLinkClick}>
@@ -278,11 +279,21 @@ const Sidebar = ({ isOpen, onClose }) => {
           )}
         </div>
 
-        {/* Footer Info */}
-        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 mt-6">
-          <div className="font-semibold text-slate-700">NeuroFace System</div>
-          <div className="truncate">Model: MTCNN + ArcFace 512-D</div>
-          <div className="text-[10px] text-teal-600 font-medium mt-1">Status: Neural Engine Online</div>
+        {/* Footer Info & Appearance Switch */}
+        <div className="space-y-3 mt-6">
+          <div className="p-3 bg-neutral-100 border border-neutral-200 rounded-xl text-xs text-neutral-600">
+            <div className="font-semibold text-black">NeuroFace System</div>
+            <div className="truncate">Model: MTCNN + ArcFace 512-D</div>
+            <div className="text-[10px] text-neutral-700 font-medium mt-1 flex items-center space-x-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-black"></span>
+              <span>Neural Engine Online</span>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between px-1 py-0.5">
+            <span className="text-xs font-semibold text-neutral-500">Theme</span>
+            <ThemeToggle showLabel={true} />
+          </div>
         </div>
       </aside>
     </>

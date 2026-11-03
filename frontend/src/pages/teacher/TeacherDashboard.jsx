@@ -63,10 +63,10 @@ const TeacherDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Teacher Hero Banner */}
-      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white shadow-lg relative overflow-hidden">
+      <div className="p-6 md:p-8 rounded-3xl bg-black border border-neutral-800 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-neutral-900 text-neutral-300 border border-neutral-700">
               {user?.is_hod
                 ? 'Head of Department (HOD)'
                 : user?.is_class_advisor
@@ -74,38 +74,38 @@ const TeacherDashboard = () => {
                 : 'Faculty Member'}
             </span>
             {user?.is_hod && (
-              <span className="text-xs font-semibold text-amber-300 flex items-center">
-                <Award className="w-3.5 h-3.5 mr-1" /> Elevated Privileges Active
+              <span className="text-xs font-semibold text-neutral-300 flex items-center">
+                <Award className="w-3.5 h-3.5 mr-1 text-white" /> Elevated Privileges Active
               </span>
             )}
             {user?.is_class_advisor && !user?.is_hod && (
-              <span className="text-xs font-semibold text-teal-300 flex items-center">
-                <Award className="w-3.5 h-3.5 mr-1" /> Class Advisor Privileges
+              <span className="text-xs font-semibold text-neutral-300 flex items-center">
+                <Award className="w-3.5 h-3.5 mr-1 text-white" /> Class Advisor Privileges
               </span>
             )}
           </div>
           <h1 className="text-3xl font-extrabold font-heading text-white">
             Welcome back, {user?.full_name}!
           </h1>
-          <p className="text-slate-300 text-sm leading-relaxed">
+          <p className="text-neutral-300 text-sm leading-relaxed">
             Conduct multi-face AI attendance sessions, track classroom reports, and review student leave letters with automated OCR verification.
           </p>
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <Link
               to="/teacher/start-session"
-              className="inline-flex items-center px-5 py-3 rounded-xl bg-teal-500 text-slate-950 font-bold text-sm hover:bg-teal-400 transition-colors shadow-lg shadow-teal-500/20"
+              className="inline-flex items-center px-5 py-3 rounded-xl bg-white text-black font-extrabold text-sm hover:bg-neutral-200 transition-colors shadow"
             >
               <Camera className="w-4 h-4 mr-2" />
               Start Attendance Session
             </Link>
             <Link
               to="/teacher/leaves"
-              className="inline-flex items-center px-5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-100 font-semibold text-sm transition-colors border border-slate-700"
+              className="inline-flex items-center px-5 py-3 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-white font-semibold text-sm transition-colors border border-neutral-700"
             >
-              <FileText className="w-4 h-4 mr-2 text-teal-400" />
+              <FileText className="w-4 h-4 mr-2 text-white" />
               Review Leaves & OCR
               {pendingCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-500 text-white">
+                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-extrabold bg-white text-black">
                   {pendingCount}
                 </span>
               )}
@@ -119,20 +119,20 @@ const TeacherDashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-lg font-bold text-slate-900 font-heading">
+              <h2 className="text-lg font-bold text-black font-heading">
                 Student Leaves & Medical Certificates
               </h2>
               {pendingCount > 0 ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-neutral-900 text-white border border-neutral-700">
                   {pendingCount} Action Required
                 </span>
               ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <CheckCircle2 className="w-3 h-3 mr-1" /> Up to Date
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300">
+                  <CheckCircle2 className="w-3 h-3 mr-1 text-black" /> Up to Date
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-neutral-500 mt-0.5">
               {user?.is_hod
                 ? 'Department-wide leave requests and medical certificates requiring HOD review'
                 : user?.is_class_advisor
@@ -143,7 +143,7 @@ const TeacherDashboard = () => {
 
           <Link
             to="/teacher/leaves"
-            className="text-xs font-bold text-teal-600 hover:text-teal-700 flex items-center space-x-1"
+            className="text-xs font-bold text-black hover:underline flex items-center space-x-1"
           >
             <span>Open Leaves Review Hub ({leaves.length})</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -151,12 +151,12 @@ const TeacherDashboard = () => {
         </div>
 
         {pendingLeaves.length === 0 ? (
-          <div className="py-6 px-4 rounded-2xl bg-slate-50 border border-slate-200/60 text-center space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center mx-auto">
+          <div className="py-6 px-4 rounded-2xl bg-neutral-50 border border-neutral-200 text-center space-y-2">
+            <div className="w-10 h-10 rounded-xl bg-neutral-100 text-black flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <p className="text-sm font-semibold text-slate-700">No Pending Leave Applications</p>
-            <p className="text-xs text-slate-400 max-w-md mx-auto">
+            <p className="text-sm font-semibold text-neutral-800">No Pending Leave Applications</p>
+            <p className="text-xs text-neutral-500 max-w-md mx-auto">
               All leave requests and medical certificates submitted by students have been reviewed.
             </p>
           </div>
@@ -167,56 +167,52 @@ const TeacherDashboard = () => {
               return (
                 <div
                   key={leave.id}
-                  className="p-5 rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/40 via-white to-white shadow-sm space-y-4 hover:border-amber-300 transition-all flex flex-col justify-between"
+                  className="p-5 rounded-2xl border border-neutral-200 bg-white shadow-sm space-y-4 hover:border-neutral-400 transition-all flex flex-col justify-between"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-bold text-slate-900 text-sm">{leave.student_name}</h4>
-                        <span className="font-mono text-xs text-slate-500">{leave.register_number}</span>
+                        <h4 className="font-bold text-black text-sm">{leave.student_name}</h4>
+                        <span className="font-mono text-xs text-neutral-500">{leave.register_number}</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-neutral-100 text-black border border-neutral-300">
                         PENDING
                       </span>
                     </div>
 
                     <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center text-slate-600">
-                        <Calendar className="w-3.5 h-3.5 mr-1.5 text-teal-600 shrink-0" />
+                      <div className="flex items-center text-neutral-600">
+                        <Calendar className="w-3.5 h-3.5 mr-1.5 text-black shrink-0" />
                         <span className="font-medium">{leave.start_date} &rarr; {leave.end_date}</span>
                       </div>
-                      <div className="flex items-center space-x-1.5 text-slate-600">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold ${
-                          leave.day_type === 'HALF_DAY' || leave.subject_id
-                            ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                            : 'bg-slate-100 text-slate-700 border border-slate-200'
-                        }`}>
+                      <div className="flex items-center space-x-1.5 text-neutral-600">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-neutral-100 text-black border border-neutral-300">
                           {leave.day_type === 'HALF_DAY' || leave.subject_id ? 'HALF DAY' : 'FULL DAY'}
                         </span>
-                        <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <BookOpen className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
                         <span className="truncate">{leave.subject_name || 'All Subjects'}</span>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs italic">
+                      <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs italic">
                         "{leave.reason}"
                       </div>
                     </div>
 
                     {/* Attached OCR Document Telemetry pill */}
                     {doc ? (
-                      <div className="p-2.5 rounded-xl bg-slate-900 text-white text-[11px] space-y-1.5">
+                      <div className="p-2.5 rounded-xl bg-black border border-neutral-800 text-white text-[11px] space-y-1.5">
                         <div className="flex items-center justify-between">
-                          <span className="font-semibold truncate max-w-[150px] text-teal-300" title={doc.file_name}>
+                          <span className="font-semibold truncate max-w-[150px] text-white" title={doc.file_name}>
                             📎 {doc.file_name}
                           </span>
                           {doc.ocr_result && (
-                            <span className="px-1.5 py-0.2 rounded bg-teal-500/20 text-teal-300 font-mono text-[10px]">
+                            <span className="px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-200 font-mono text-[10px] border border-neutral-700">
                               {Math.round(doc.ocr_result.confidence * 100)}% OCR
                             </span>
                           )}
                         </div>
                         {doc.ocr_result?.detected_reason && (
-                          <p className="text-[10px] text-slate-300 truncate">
-                            <span className="text-slate-400">OCR Detected:</span> {doc.ocr_result.detected_reason}
+                          <p className="text-[10px] text-neutral-300 truncate">
+                            <span className="text-neutral-400">OCR Detected:</span> {doc.ocr_result.detected_reason}
                           </p>
                         )}
                         <a

@@ -163,7 +163,7 @@ const StudentReportsPage = () => {
                   type="button"
                   onClick={handleDownload}
                   disabled={downloading}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-teal-700 disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-sm font-bold text-white hover:bg-neutral-800 disabled:opacity-60 transition"
                 >
                   <FileDown className="w-4 h-4" />
                   {downloading ? 'Preparing PDF...' : 'Download PDF'}

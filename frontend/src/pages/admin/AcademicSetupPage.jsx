@@ -237,7 +237,7 @@ const AcademicSetupPage = () => {
               </div>
               <button
                 type="submit"
-                className="w-full py-2 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700"
+                className="w-full py-2 bg-black text-white rounded-xl font-semibold hover:bg-neutral-800 transition"
               >
                 Create Class
               </button>
@@ -339,7 +339,7 @@ const AcademicSetupPage = () => {
               </div>
               <button
                 type="submit"
-                className="w-full py-2 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700"
+                className="w-full py-2 bg-black text-white rounded-xl font-semibold hover:bg-neutral-800 transition"
               >
                 Create Subject
               </button>
@@ -399,7 +399,7 @@ const AcademicSetupPage = () => {
               </div>
               <button
                 type="submit"
-                className="w-full py-2 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700"
+                className="w-full py-2 bg-black text-white rounded-xl font-semibold hover:bg-neutral-800 transition"
               >
                 Create Department
               </button>
@@ -506,7 +506,7 @@ const AcademicSetupPage = () => {
                       setAdvisorSaving(false);
                     }
                   }}
-                  className="px-4 py-2 text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm disabled:opacity-50"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-black hover:bg-neutral-800 rounded-xl shadow disabled:opacity-50 transition"
                 >
                   {advisorSaving ? 'Saving...' : 'Save Advisor'}
                 </button>

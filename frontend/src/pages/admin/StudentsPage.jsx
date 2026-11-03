@@ -192,7 +192,7 @@ const StudentsPage = () => {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-sm transition-colors"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-black hover:bg-neutral-800 text-white text-sm font-semibold shadow transition-colors"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           Enroll New Student
@@ -417,7 +417,7 @@ const StudentsPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700"
+                  className="px-4 py-2 bg-black text-white rounded-xl font-semibold hover:bg-neutral-800 transition"
                 >
                   Enroll Student
                 </button>
@@ -568,7 +568,7 @@ const StudentsPage = () => {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 disabled:opacity-50"
+                  className="px-4 py-2 bg-black text-white rounded-xl font-semibold hover:bg-neutral-800 disabled:opacity-50 transition"
                 >
                   {actionLoading ? 'Saving...' : 'Save Changes'}
                 </button>

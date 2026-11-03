@@ -47,6 +47,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "*",
     ]
 
     class Config:
@@ -56,6 +57,20 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def derive_folders(self):
         """Work out the folders that live inside UPLOAD_DIR."""
+        if os.getenv("VERCEL"):
+            # Vercel serverless has a read-only root filesystem; only /tmp is writable
+            self.UPLOAD_DIR = "/tmp/uploads"
+            if "sqlite" in self.DATABASE_URL and not self.DATABASE_URL.startswith("sqlite:////tmp/"):
+                import shutil
+                tmp_db = "/tmp/neuroface.db"
+                seed_db = os.path.join(BASE_DIR, "neuroface.db")
+                if not os.path.exists(tmp_db) and os.path.exists(seed_db):
+                    try:
+                        shutil.copy2(seed_db, tmp_db)
+                    except Exception as e:
+                        print(f"[Vercel] Could not copy seed db: {e}")
+                self.DATABASE_URL = f"sqlite:///{tmp_db}"
+
         if not self.LEAVE_UPLOAD_DIR:
             self.LEAVE_UPLOAD_DIR = os.path.join(self.UPLOAD_DIR, "leaves")
         if not self.FACE_SAMPLES_DIR:
@@ -67,4 +82,7 @@ settings = Settings()
 
 # Make sure every folder the app writes to exists.
 for _folder in (settings.UPLOAD_DIR, settings.LEAVE_UPLOAD_DIR, settings.FACE_SAMPLES_DIR, settings.AI_MODELS_DIR):
-    os.makedirs(_folder, exist_ok=True)
+    try:
+        os.makedirs(_folder, exist_ok=True)
+    except OSError:
+        pass

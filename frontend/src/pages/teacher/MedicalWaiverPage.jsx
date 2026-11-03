@@ -62,7 +62,7 @@ const MedicalWaiverPage = () => {
 
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold shadow-sm transition-colors"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-black hover:bg-neutral-800 text-white text-sm font-semibold shadow transition-colors"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           Grant Medical Waiver
@@ -70,8 +70,8 @@ const MedicalWaiverPage = () => {
       </div>
 
       {msg && (
-        <div className="p-4 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-2xl text-xs font-semibold flex items-center space-x-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+        <div className="p-4 bg-neutral-100 text-black border border-neutral-300 rounded-2xl text-xs font-semibold flex items-center space-x-2">
+          <CheckCircle2 className="w-4 h-4 text-black" />
           <span>{msg}</span>
         </div>
       )}
@@ -174,7 +174,7 @@ const MedicalWaiverPage = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 shadow"
+                  className="px-5 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-neutral-800 shadow transition"
                 >
                   Confirm & Apply Waiver
                 </button>
