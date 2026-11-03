@@ -18,7 +18,7 @@ class MultiFrameConfirmationBuffer:
     before officially marking attendance, with strict anti-spoof temporal liveness analysis.
     Prevents presentation attacks using printed photos on paper or still images on mobile devices.
     """
-    def __init__(self, required_hits: int = 3, window_size: int = 4, max_idle_seconds: float = 4.0):
+    def __init__(self, required_hits: int = 2, window_size: int = 4, max_idle_seconds: float = 3.5):
         self.required_hits = required_hits
         self.window_size = window_size
         self.max_idle_seconds = max_idle_seconds
@@ -29,7 +29,7 @@ class MultiFrameConfirmationBuffer:
         # session_id -> lockout timestamp (when a phone/screen/photo spoof was detected)
         self._spoof_lockouts: Dict[int, float] = {}
 
-    def record_spoof(self, session_id: int, lockout_seconds: float = 3.0):
+    def record_spoof(self, session_id: int, lockout_seconds: float = 1.0):
         """
         When a phone, screen, or photo attack is detected, immediately purge all pending
         confirmation hits and lock the session.

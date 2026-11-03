@@ -29,7 +29,8 @@ const LiveAttendancePage = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(0);
-  const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) or 'user' (front)
+  const [facingMode, setFacingMode] = useState('user'); // Default to 'user' (front selfie camera) for student passing
+  const [lastMarkedStudent, setLastMarkedStudent] = useState(null);
 
   // 1. Fetch initial session statistics & prior records
   useEffect(() => {
@@ -116,6 +117,39 @@ const LiveAttendancePage = () => {
       }
     };
   }, []);
+
+  // Audio chime and haptic feedback for physical mobile phone passing
+  const triggerSuccessFeedback = (student) => {
+    setLastMarkedStudent(student);
+    setTimeout(() => setLastMarkedStudent(null), 3000);
+
+    // Audio Chime
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, now); // D5
+        osc.frequency.setValueAtTime(880.00, now + 0.12); // A5
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+    } catch (e) {
+      // Audio autoplay restrictions
+    }
+
+    // Mobile Phone Vibration
+    if (navigator.vibrate) {
+      navigator.vibrate([150, 60, 150]);
+    }
+  };
 
   const handleToggleFacingMode = () => {
     const nextMode = facingMode === 'environment' ? 'user' : 'environment';
@@ -216,8 +250,15 @@ const LiveAttendancePage = () => {
           ctx.fillText(tagText, boxX + 8, Math.max(16, boxY - 8));
         });
 
-        // Refresh present records if new students were marked
+        // Refresh present records & trigger mobile audio/vibration feedback
         if (data.newly_marked_count > 0) {
+          const matched = data.faces.find((f) => f.status === 'MATCHED');
+          if (matched) {
+            triggerSuccessFeedback({
+              name: matched.student_name,
+              regNo: matched.register_number
+            });
+          }
           const recRes = await api.get(`/teacher/sessions/${sessionId}/records`);
           setPresentRecords(recRes.data.filter((r) => r.status === 'PRESENT'));
         }
@@ -345,9 +386,32 @@ const LiveAttendancePage = () => {
             />
 
             {/* In-Video HUD Status */}
-            <div className="absolute top-3 left-3 glass px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-white/20 text-[10px] sm:text-xs font-semibold text-slate-800 flex items-center space-x-1.5 shadow">
+            <div className="absolute top-3 left-3 glass px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl border border-white/20 text-[10px] sm:text-xs font-semibold text-slate-800 flex items-center space-x-1.5 shadow z-10">
               <Sparkles className="w-3.5 h-3.5 text-teal-600" />
-              <span>MTCNN + ArcFace 512-D</span>
+              <span>{facingMode === 'user' ? 'Front Camera (Self-Scan)' : 'Back Camera (Classroom)'}</span>
+            </div>
+
+            {/* Mobile Handheld Attendance Success Banner */}
+            {lastMarkedStudent && (
+              <div className="absolute top-12 left-3 right-3 sm:left-6 sm:right-6 bg-emerald-600 text-white p-3.5 rounded-2xl shadow-2xl border-2 border-emerald-300 flex items-center justify-between z-30 animate-pulse">
+                <div className="flex items-center space-x-3">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-100">Attendance Recorded!</div>
+                    <div className="text-sm font-extrabold">{lastMarkedStudent.name} <span className="text-xs font-normal opacity-90">({lastMarkedStudent.regNo})</span></div>
+                  </div>
+                </div>
+                <div className="text-[11px] font-bold bg-white text-emerald-800 px-2.5 py-1 rounded-xl shrink-0 shadow-sm">
+                  Pass Phone ➔
+                </div>
+              </div>
+            )}
+
+            {/* Subtle Mobile Oval Guide */}
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className="w-48 h-64 sm:w-56 sm:h-72 border-2 border-dashed border-teal-400/40 rounded-[50%] animate-pulse"></div>
             </div>
 
             {/* Camera Flip Button Overlay for Mobile Phones & Tablets */}

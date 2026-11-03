@@ -395,16 +395,15 @@ def evaluate_face_authenticity(
     h_ratio = h / float(fh)
     w_ratio = w / float(fw)
 
-    if not is_registration:
-        if h_ratio > 0.58 or w_ratio > 0.52:
-            return False, "SPOOF_DETECTED", f"Phone/Image presented too close (h:{h_ratio:.1%}, w:{w_ratio:.1%}) - please step back to normal distance"
+    # Allow natural handheld mobile selfie distance (up to 82%) and registration framing (up to 88%)
+    max_h = 0.88 if is_registration else 0.82
+    max_w = 0.88 if is_registration else 0.82
 
-        if (x1 < 10 or y1 < 10 or x2 > fw - 10 or y2 > fh - 10) and h_ratio > 0.48:
-            return False, "SPOOF_DETECTED", "Phone/Image clipped at camera boundary - please maintain normal distance"
-    else:
-        # In registration, allow natural portrait framing up to 88%
-        if h_ratio > 0.88 or w_ratio > 0.88:
-            return False, "LOW_QUALITY", "Face too close to camera - please step back slightly"
+    if h_ratio > max_h or w_ratio > max_w:
+        return False, "LOW_QUALITY", f"Face too close to camera ({h_ratio:.1%}) - please hold phone at comfortable arm's length"
+
+    if not is_registration and (x1 < 6 or y1 < 6 or x2 > fw - 6 or y2 > fh - 6) and h_ratio > 0.78:
+        return False, "SPOOF_DETECTED", "Subject clipped at camera boundary - please center face"
 
     # 5. Facial landmarks anatomical geometry
     if landmarks:
