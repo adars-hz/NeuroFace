@@ -6,7 +6,7 @@ const getBaseUrl = () => {
   }
   // If running inside Capacitor Native Android/iOS shell, default to cloud endpoint
   if (typeof window !== 'undefined' && (window.location.protocol === 'capacitor:' || (window.location.hostname === 'localhost' && window.Capacitor?.isNativePlatform?.()))) {
-    return 'https://adars-hz-neuroface-api.hf.space/api/v1';
+    return 'https://neuroface-1.onrender.com/api/v1';
   }
   return '/api/v1';
 };
