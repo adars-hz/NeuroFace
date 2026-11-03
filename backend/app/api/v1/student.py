@@ -208,7 +208,8 @@ def validate_single_frame(
         box=face["box"],
         crop_bgr=face["crop"],
         landmarks=face.get("landmarks"),
-        detection_score=face["score"]
+        detection_score=face["score"],
+        is_registration=True
     )
     if not is_authentic:
         if auth_status == "SPOOF_DETECTED":
@@ -322,7 +323,8 @@ def register_student_face(
             box=face["box"],
             crop_bgr=face["crop"],
             landmarks=face.get("landmarks"),
-            detection_score=face["score"]
+            detection_score=face["score"],
+            is_registration=True
         )
         if not is_authentic:
             if auth_status == "SPOOF_DETECTED":

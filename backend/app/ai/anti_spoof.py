@@ -3,7 +3,7 @@ import numpy as np
 from typing import Tuple, Optional, List
 
 
-def verify_face_landmarks(landmarks: List[List[float]], box: List[int]) -> Tuple[bool, str]:
+def verify_face_landmarks(landmarks: List[List[float]], box: List[int], is_registration: bool = False) -> Tuple[bool, str]:
     """
     Verifies that the detected facial landmarks follow natural human facial anatomy.
     Prevents false positive detections from objects, clothing prints, bag logos, and wall artifacts.
@@ -22,32 +22,43 @@ def verify_face_landmarks(landmarks: List[List[float]], box: List[int]) -> Tuple
     eye_dx = right_eye[0] - left_eye[0]
     eye_dy = abs(right_eye[1] - left_eye[1])
 
-    if eye_dx < 0.16 * w:
+    # Allow head turns in registration mode (yaw angles up to 25°)
+    min_eye_sep = 0.07 * w if is_registration else 0.16 * w
+    if eye_dx < min_eye_sep:
         return False, "Eyes are too close or reversed (non-face object)"
 
-    # Head tilt / vertical asymmetry check (allows natural tilt up to ~33 degrees)
-    if eye_dy / (eye_dx + 1e-6) > 0.65:
+    # Head tilt / vertical asymmetry check (allows natural tilt up to ~33 degrees in classroom, up to 45 degrees in registration)
+    max_tilt_ratio = 0.85 if is_registration else 0.65
+    if eye_dy / (eye_dx + 1e-6) > max_tilt_ratio:
         return False, "Excessive landmark vertical distortion (non-face object)"
 
     # 2. Vertical anatomy ordering: eyes must be above nose, and nose must be above mouth
     eyes_y = (left_eye[1] + right_eye[1]) / 2.0
     mouth_y = (left_mouth[1] + right_mouth[1]) / 2.0
 
-    if not (eyes_y < nose[1] < mouth_y):
-        return False, "Scrambled facial feature ordering (non-face object)"
+    if is_registration:
+        # In tilt-up poses, nose can align closely with eyes
+        if not (eyes_y - 8 <= nose[1] <= mouth_y + 8):
+            return False, "Scrambled facial feature ordering (non-face object)"
+    else:
+        if not (eyes_y < nose[1] < mouth_y):
+            return False, "Scrambled facial feature ordering (non-face object)"
 
     # 3. Eye to mouth vertical proportion
     eye_to_mouth = mouth_y - eyes_y
-    if eye_to_mouth < 0.18 * h or eye_to_mouth > 0.85 * h:
+    min_em = 0.12 * h if is_registration else 0.18 * h
+    if eye_to_mouth < min_em or eye_to_mouth > 0.88 * h:
         return False, "Unnatural eye-to-mouth vertical distance (non-face pattern)"
 
     # 4. Nose horizontal centering
-    if not (left_eye[0] - 0.15 * w <= nose[0] <= right_eye[0] + 0.15 * w):
+    nose_margin = 0.28 * w if is_registration else 0.15 * w
+    if not (left_eye[0] - nose_margin <= nose[0] <= right_eye[0] + nose_margin):
         return False, "Nose outside eye boundary (distorted object)"
 
     # 5. Mouth width
     mouth_dx = right_mouth[0] - left_mouth[0]
-    if mouth_dx < 0.08 * w:
+    min_mouth = 0.05 * w if is_registration else 0.08 * w
+    if mouth_dx < min_mouth:
         return False, "Invalid mouth geometry (non-face object)"
 
     return True, "Valid human facial geometry"
@@ -343,18 +354,21 @@ def evaluate_face_authenticity(
     box: List[int],
     crop_bgr: np.ndarray,
     landmarks: Optional[List[List[float]]] = None,
-    detection_score: float = 1.0
+    detection_score: float = 1.0,
+    is_registration: bool = False
 ) -> Tuple[bool, str, str]:
     """
     Comprehensive authenticity & anti-spoof evaluation:
       - Filters out non-face objects (logos, bags, furniture, shadows, wall art)
-      - Blocks close-up presentation attack evasion attempts (face filling >58% of camera)
+      - Blocks close-up presentation attack evasion attempts (face filling >58% of camera in classroom)
       - Detects phone/screen/photo presentation attacks
+      - In registration mode (is_registration=True): adapts proximity & pose geometry for guided 5-pose capture
     Returns: (is_valid: bool, status_tag: str, detail_message: str)
       status_tag: 'OK' | 'SPOOF_DETECTED' | 'NON_FACE_OBJECT' | 'LOW_QUALITY'
     """
     # 1. Detection confidence check (MTCNN score)
-    if detection_score < 0.85:
+    min_confidence = 0.70 if is_registration else 0.85
+    if detection_score < min_confidence:
         return False, "NON_FACE_OBJECT", f"Low detection confidence ({detection_score:.2f}) - likely non-face object"
 
     # 2. Aspect ratio check (w:h)
@@ -363,35 +377,44 @@ def evaluate_face_authenticity(
     h = max(1, y2 - y1)
     aspect_ratio = h / float(w)
 
-    if aspect_ratio < 0.90 or aspect_ratio > 1.75:
+    min_ar = 0.82 if is_registration else 0.90
+    max_ar = 1.85 if is_registration else 1.75
+    if aspect_ratio < min_ar or aspect_ratio > max_ar:
         return False, "NON_FACE_OBJECT", f"Unnatural aspect ratio ({aspect_ratio:.2f}) - non-face object"
 
     # 3. Minimum dimensions
-    if w < 50 or h < 50:
-        return False, "LOW_QUALITY", f"Face box too small ({w}x{h}px) - minimum 50px required"
+    if w < 45 or h < 45:
+        return False, "LOW_QUALITY", f"Face box too small ({w}x{h}px) - minimum 45px required"
 
     # 4. Proximity / Close-up Presentation Check
-    # In classroom/desk attendance, a real student's face occupies 18% to 50% of the frame height.
+    # In classroom attendance, a real student's face occupies 18% to 50% of the frame height.
     # When a phone or photo is shoved close to the camera lens to hide the phone bezel/edges,
     # the face occupies 60% to 90%+ of the frame height, or touches the frame boundaries.
+    # In registration mode, students are guided into a close-up portrait inside the oval guide.
     fh, fw = full_frame.shape[:2]
     h_ratio = h / float(fh)
     w_ratio = w / float(fw)
 
-    if h_ratio > 0.58 or w_ratio > 0.52:
-        return False, "SPOOF_DETECTED", f"Phone/Image presented too close (h:{h_ratio:.1%}, w:{w_ratio:.1%}) - please step back to normal distance"
+    if not is_registration:
+        if h_ratio > 0.58 or w_ratio > 0.52:
+            return False, "SPOOF_DETECTED", f"Phone/Image presented too close (h:{h_ratio:.1%}, w:{w_ratio:.1%}) - please step back to normal distance"
 
-    if (x1 < 10 or y1 < 10 or x2 > fw - 10 or y2 > fh - 10) and h_ratio > 0.48:
-        return False, "SPOOF_DETECTED", "Phone/Image clipped at camera boundary - please maintain normal distance"
+        if (x1 < 10 or y1 < 10 or x2 > fw - 10 or y2 > fh - 10) and h_ratio > 0.48:
+            return False, "SPOOF_DETECTED", "Phone/Image clipped at camera boundary - please maintain normal distance"
+    else:
+        # In registration, allow natural portrait framing up to 88%
+        if h_ratio > 0.88 or w_ratio > 0.88:
+            return False, "LOW_QUALITY", "Face too close to camera - please step back slightly"
 
     # 5. Facial landmarks anatomical geometry
     if landmarks:
-        is_geo_ok, geo_msg = verify_face_landmarks(landmarks, box)
+        is_geo_ok, geo_msg = verify_face_landmarks(landmarks, box, is_registration=is_registration)
         if not is_geo_ok:
             return False, "NON_FACE_OBJECT", geo_msg
 
     # 6. Human skin presence check
-    has_skin, skin_pct = verify_skin_presence(crop_bgr, min_ratio=0.20)
+    skin_threshold = 0.15 if is_registration else 0.20
+    has_skin, skin_pct = verify_skin_presence(crop_bgr, min_ratio=skin_threshold)
     if not has_skin:
         return False, "NON_FACE_OBJECT", f"Insufficient skin chrominance ({skin_pct * 100:.1f}%) - non-face object"
 
