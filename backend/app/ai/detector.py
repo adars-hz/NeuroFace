@@ -110,10 +110,10 @@ class FaceDetector:
             y2 = min(h, y2)
 
             # Reject non-face objects and low confidence detections (0.70 threshold)
-            if float(scores[i]) < 0.70:
+            if float(scores[i]) < 0.60:
                 continue
             # Skip boxes that are too small to be a genuine face in front of the camera
-            if (x2 - x1) < 45 or (y2 - y1) < 45:
+            if (x2 - x1) < 35 or (y2 - y1) < 35:
                 continue
 
             pts = None

@@ -12,15 +12,15 @@ def evaluate_face_quality(
 ) -> Tuple[bool, str]:
     """Check a face crop before we try to recognise it.
 
-    Returns (is_good, message). The three checks are:
+    Uses calibrated thresholds for phone/webcam sensors in diverse classroom lighting:
       1. Size      - the crop must be at least `min_size` pixels wide and tall.
-      2. Sharpness - the Laplacian variance must be above `blur_threshold`.
-      3. Lighting  - the average brightness must be in a comfortable range.
+      2. Sharpness - the Laplacian variance must be above `blur_threshold` (6.0 for webcams).
+      3. Lighting  - handles ambient shadows (down to 18) and bright daylight.
     """
     if min_size is None:
-        min_size = settings.MIN_FACE_SIZE
+        min_size = getattr(settings, 'MIN_FACE_SIZE', 35)
     if blur_threshold is None:
-        blur_threshold = settings.BLUR_THRESHOLD
+        blur_threshold = getattr(settings, 'BLUR_THRESHOLD', 6.0)
 
     h, w = face_img.shape[:2]
 
@@ -30,15 +30,15 @@ def evaluate_face_quality(
 
     # 2. Blur check using Laplacian variance
     gray = cv2.cvtColor(face_img, cv2.COLOR_BGR2GRAY) if len(face_img.shape) == 3 else face_img
-    variance = cv2.Laplacian(gray, cv2.CV_64F).var()
+    variance = float(cv2.Laplacian(gray, cv2.CV_64F).var())
     if variance < blur_threshold:
         return False, f"Face image is blurry (score: {variance:.1f}, min: {blur_threshold:.1f})."
 
     # 3. Brightness check
-    mean_brightness = np.mean(gray)
-    if mean_brightness < 40:
+    mean_brightness = float(np.mean(gray))
+    if mean_brightness < 18:
         return False, "Poor lighting: Image is too dark."
-    if mean_brightness > 225:
+    if mean_brightness > 240:
         return False, "Poor lighting: Image is overexposed/too bright."
 
     return True, "Good quality"

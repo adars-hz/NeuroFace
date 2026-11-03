@@ -355,13 +355,14 @@ def process_camera_frame(
 
         # If session is locked out, authentic faces continue to recognition and are held in CONFIRMING state without false spoof rejection
 
-        # 2. Quality check
-        is_quality_ok, _ = evaluate_face_quality(crop)
-        if not is_quality_ok:
+        # 2. Quality check (allows genuine faces in variable ambient lighting to proceed)
+        is_quality_ok, quality_msg = evaluate_face_quality(crop)
+        if not is_quality_ok and detected["score"] < 0.72:
             face_results.append(DetectedFaceResult(
                 box=box,
-                confidence=detected["score"],
-                status="LOW_QUALITY"
+                confidence=round(detected["score"], 3),
+                status="LOW_QUALITY",
+                message=quality_msg
             ))
             continue
 
