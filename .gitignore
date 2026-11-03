@@ -10,6 +10,7 @@ __pycache__/
 build/
 dist/
 *.egg-info/
+node_modules/
 
 # Unit test / coverage reports
 .pytest_cache/
@@ -34,6 +35,9 @@ backend/venv/
 # Uploads
 backend/uploads/**
 !backend/uploads/**/.gitkeep
+
+# Submodules / clones
+neuroface-api/
 
 # IDEs
 .vscode/

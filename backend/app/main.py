@@ -21,6 +21,19 @@ async def lifespan(app: FastAPI):
     # 2. Apply the hand-written migrations for tables that already exist.
     run_migrations(engine)
     print(f"[{settings.PROJECT_NAME}] Database schemas synchronized successfully.")
+
+    # 3. Auto-seed initial demo data if database is empty
+    try:
+        from app.database.session import SessionLocal
+        from app.models.user import User
+        from seed_data import seed
+        with SessionLocal() as db:
+            if db.query(User).count() == 0:
+                seed(db)
+                print(f"[{settings.PROJECT_NAME}] Initial demo accounts seeded successfully.")
+    except Exception as e:
+        print(f"[{settings.PROJECT_NAME}] Seed initialization note: {e}")
+
     yield
     print(f"[{settings.PROJECT_NAME}] Shutting down.")
 
