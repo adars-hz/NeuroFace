@@ -154,7 +154,7 @@ const LoginPage = () => {
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => quickLogin('admin', 'AdminPassword123!')}
+                onClick={() => quickLogin('admin', 'admin123')}
                 className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-left transition-colors"
               >
                 <div className="font-semibold text-neutral-900 dark:text-white">Admin Account</div>
@@ -162,7 +162,7 @@ const LoginPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => quickLogin('hod_mca', 'HodPassword123!')}
+                onClick={() => quickLogin('hod_mca', 'teacher123')}
                 className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-left transition-colors"
               >
                 <div className="font-semibold text-neutral-900 dark:text-white">HOD Account</div>
@@ -170,7 +170,7 @@ const LoginPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => quickLogin('prof_rahul', 'TeacherPassword123!')}
+                onClick={() => quickLogin('prof_rahul', 'teacher123')}
                 className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-left transition-colors"
               >
                 <div className="font-semibold text-neutral-900 dark:text-white">Faculty Account</div>
@@ -178,7 +178,7 @@ const LoginPage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => quickLogin('student_arun', 'StudentPassword123!')}
+                onClick={() => quickLogin('student_arun', 'student123')}
                 className="p-2.5 rounded-xl bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-left transition-colors"
               >
                 <div className="font-semibold text-neutral-900 dark:text-white">Student Account</div>

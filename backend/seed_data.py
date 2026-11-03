@@ -24,10 +24,10 @@ from app.models.attendance import AttendanceSession, AttendanceRecord, Attendanc
 from app.models.leave import FineRule
 
 # Passwords used by the demo accounts.
-ADMIN_PASSWORD = "AdminPassword123!"
-HOD_PASSWORD = "HodPassword123!"
-TEACHER_PASSWORD = "TeacherPassword123!"
-STUDENT_PASSWORD = "StudentPassword123!"
+ADMIN_PASSWORD = "admin123"
+HOD_PASSWORD = "teacher123"
+TEACHER_PASSWORD = "teacher123"
+STUDENT_PASSWORD = "student123"
 
 
 def seed(db: Session) -> None:
