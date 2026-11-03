@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     try:
         import torch
         torch.set_num_threads(1)
-        torch.set_num_interop_threads(1)
+        # torch.set_num_interop_threads(1)
         from app.ai.detector import FaceDetector
         from app.ai.recognizer import FaceRecognizer
         FaceDetector()._ensure_model()

@@ -55,7 +55,7 @@ class FaceDetector:
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if device == "cpu":
             torch.set_num_threads(1)
-            torch.set_num_interop_threads(1)
+            # torch.set_num_interop_threads(1)
         self._mtcnn = MTCNN(
             keep_all=True,
             select_largest=False,

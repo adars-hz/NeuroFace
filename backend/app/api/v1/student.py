@@ -301,6 +301,9 @@ def register_student_face(
     for index, frame_base64 in enumerate(payload.frames):
         try:
             image = decode_base64_image(frame_base64)
+            if image.shape[1] > 480:
+                scale = 480.0 / image.shape[1]
+                image = cv2.resize(image, (480, int(image.shape[0] * scale)))
         except Exception:
             continue  # Skip a frame we cannot read.
 
@@ -335,6 +338,9 @@ def register_student_face(
             continue
 
         valid_embeddings.append(face_recognizer.extract_embedding(face["aligned"]))
+        # Fast enrollment: 3 distinct verified poses provide sufficient biometric entropy
+        if len(valid_embeddings) >= 3:
+            break
 
     if not valid_embeddings:
         raise HTTPException(

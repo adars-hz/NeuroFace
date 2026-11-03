@@ -63,7 +63,7 @@ class FaceRecognizer:
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if device == "cpu":
             torch.set_num_threads(1)
-            torch.set_num_interop_threads(1)
+            # torch.set_num_interop_threads(1)
         self.torch_model = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
     @property

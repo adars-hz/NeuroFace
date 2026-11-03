@@ -309,6 +309,8 @@ const FaceRegistrationPage = () => {
         errorMsg = err.response.data.detail;
       } else if (Array.isArray(err.response?.data?.detail)) {
         errorMsg = err.response.data.detail.map((d) => d.msg).join(', ');
+      } else if (err.response?.status === 502 || err.response?.status === 504) {
+        errorMsg = 'Cloud server is warming up. Please wait a moment and click Submit again.';
       } else if (err.message === 'Network Error' || !err.response) {
         errorMsg = 'Network connectivity or server response error. Please check backend connection and retry.';
       } else if (err.message) {
