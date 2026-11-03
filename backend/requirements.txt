@@ -21,3 +21,4 @@ torchvision
 facenet-pytorch>=2.5.3
 pytesseract>=0.3.10
 onnxruntime>=1.16.0
+psycopg2-binary>=2.9.9

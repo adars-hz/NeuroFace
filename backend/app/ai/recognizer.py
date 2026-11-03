@@ -61,6 +61,9 @@ class FaceRecognizer:
             raise AIModelUnavailableError(self.load_error)
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cpu":
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
         self.torch_model = InceptionResnetV1(pretrained='vggface2').eval().to(device)
 
     @property
@@ -101,7 +104,18 @@ class FaceRecognizer:
         """Embed a face using the PyTorch InceptionResnetV1 fallback."""
         import torch
 
-        rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
+        # Adaptive CLAHE contrast enhancement for backlit or shadowed faces
+        gray = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2GRAY)
+        if np.mean(gray) < 65:
+            lab = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2LAB)
+            l, a, b = cv2.split(lab)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            cl = clahe.apply(l)
+            enhanced = cv2.cvtColor(cv2.merge((cl, a, b)), cv2.COLOR_LAB2BGR)
+            rgb = cv2.cvtColor(enhanced, cv2.COLOR_BGR2RGB)
+        else:
+            rgb = cv2.cvtColor(aligned_bgr, cv2.COLOR_BGR2RGB)
+
         if rgb.shape[:2] != (160, 160):
             rgb = cv2.resize(rgb, (160, 160))
 

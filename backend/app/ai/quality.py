@@ -18,9 +18,9 @@ def evaluate_face_quality(
       3. Lighting  - handles ambient shadows (down to 18) and bright daylight.
     """
     if min_size is None:
-        min_size = getattr(settings, 'MIN_FACE_SIZE', 35)
+        min_size = getattr(settings, 'MIN_FACE_SIZE', 30)
     if blur_threshold is None:
-        blur_threshold = getattr(settings, 'BLUR_THRESHOLD', 6.0)
+        blur_threshold = getattr(settings, 'BLUR_THRESHOLD', 3.5)
 
     h, w = face_img.shape[:2]
 
@@ -36,9 +36,9 @@ def evaluate_face_quality(
 
     # 3. Brightness check
     mean_brightness = float(np.mean(gray))
-    if mean_brightness < 18:
+    if mean_brightness < 10:
         return False, "Poor lighting: Image is too dark."
-    if mean_brightness > 240:
+    if mean_brightness > 248:
         return False, "Poor lighting: Image is overexposed/too bright."
 
     return True, "Good quality"

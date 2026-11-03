@@ -31,6 +31,7 @@ const LiveAttendancePage = () => {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [facingMode, setFacingMode] = useState('user'); // Default to 'user' (front selfie camera) for student passing
   const [lastMarkedStudent, setLastMarkedStudent] = useState(null);
+  const [aiServerStatus, setAiServerStatus] = useState('connected');
 
   // 1. Fetch initial session statistics & prior records
   useEffect(() => {
@@ -169,17 +170,24 @@ const LiveAttendancePage = () => {
       processingRef.current = true;
 
       try {
-        // Prepare capture canvas
+        // Prepare capture canvas (Optimized max-640px dimension for fast edge inference)
         if (!captureCanvasRef.current) {
           captureCanvasRef.current = document.createElement('canvas');
         }
         const capCanvas = captureCanvasRef.current;
-        capCanvas.width = video.videoWidth;
-        capCanvas.height = video.videoHeight;
+        let targetW = video.videoWidth || 640;
+        let targetH = video.videoHeight || 480;
+        if (targetW > 640) {
+          const ratio = 640 / targetW;
+          targetW = 640;
+          targetH = Math.round(targetH * ratio);
+        }
+        capCanvas.width = targetW;
+        capCanvas.height = targetH;
         const capCtx = capCanvas.getContext('2d');
-        capCtx.drawImage(video, 0, 0, capCanvas.width, capCanvas.height);
+        capCtx.drawImage(video, 0, 0, targetW, targetH);
 
-        const base64Image = capCanvas.toDataURL('image/jpeg', 0.85);
+        const base64Image = capCanvas.toDataURL('image/jpeg', 0.82);
 
         // Transmit frame to AI backend
         const response = await api.post(`/attendance/sessions/${sessionId}/process-frame`, {
@@ -187,6 +195,7 @@ const LiveAttendancePage = () => {
         });
 
         const data = response.data;
+        setAiServerStatus('connected');
 
         // Update telemetry counters
         setTelemetry({
@@ -203,8 +212,8 @@ const LiveAttendancePage = () => {
         const ctx = overlayCanvas.getContext('2d');
         ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-        const scaleX = overlayCanvas.width / video.videoWidth;
-        const scaleY = overlayCanvas.height / video.videoHeight;
+        const scaleX = overlayCanvas.width / targetW;
+        const scaleY = overlayCanvas.height / targetH;
 
         data.faces.forEach((f) => {
           const [x1, y1, x2, y2] = f.box;
@@ -264,6 +273,7 @@ const LiveAttendancePage = () => {
         }
       } catch (err) {
         console.error('Frame processing failed', err);
+        setAiServerStatus('reconnecting');
       } finally {
         processingRef.current = false;
       }
@@ -443,7 +453,12 @@ const LiveAttendancePage = () => {
           </div>
 
           <div className="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-            <span>Sampling: 1.2s Frequency</span>
+            <span className="flex items-center gap-1.5">
+              <span>Sampling: 1.2s Frequency</span>
+              {aiServerStatus === 'reconnecting' && (
+                <span className="text-amber-400 font-medium animate-pulse ml-2">● Cloud AI Connecting...</span>
+              )}
+            </span>
             <span>Multi-Face Detection</span>
           </div>
         </div>

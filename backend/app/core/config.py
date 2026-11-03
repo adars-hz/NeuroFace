@@ -31,8 +31,8 @@ class Settings(BaseSettings):
     # AI Recognition Parameters
     SIMILARITY_THRESHOLD: float = 0.70      # Cosine threshold for FaceNet / InceptionResnetV1 (0.70 calibrates FAR near zero to reject unregistered faces)
     DUPLICATE_FACE_THRESHOLD: float = 0.78  # Stricter threshold for blocking identical multi-ID enrollments
-    MIN_FACE_SIZE: int = 35                # Minimum pixel bounding box
-    BLUR_THRESHOLD: float = 6.0            # Laplacian variance cutoff
+    MIN_FACE_SIZE: int = 30                # Minimum pixel bounding box
+    BLUR_THRESHOLD: float = 3.5            # Laplacian variance cutoff
     TEMPORAL_CONFIRM_FRAMES: int = 2       # Frames out of 3 needed for confirmation
 
     # Uploads & Storage

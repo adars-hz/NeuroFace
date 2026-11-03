@@ -22,6 +22,10 @@ COPY --chown=user backend/requirements.txt requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Pre-download MTCNN and FaceNet pretrained weights into user cache during Docker build
+# This guarantees 0-second cold-start latency, zero runtime downloads, and prevents Render HTTP gateway timeouts
+RUN python -c "from facenet_pytorch import MTCNN, InceptionResnetV1; MTCNN(); InceptionResnetV1(pretrained='vggface2')"
+
 # Copy all backend application files
 COPY --chown=user backend/ .
 

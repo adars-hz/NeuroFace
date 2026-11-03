@@ -53,13 +53,16 @@ class FaceDetector:
             raise AIModelUnavailableError(self.load_error)
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        if device == "cpu":
+            torch.set_num_threads(1)
+            torch.set_num_interop_threads(1)
         self._mtcnn = MTCNN(
             keep_all=True,
             select_largest=False,
             device=device,
             post_process=False,
-            min_face_size=50,
-            thresholds=[0.65, 0.75, 0.85]
+            min_face_size=40,
+            thresholds=[0.60, 0.70, 0.80]
         )
 
     @property

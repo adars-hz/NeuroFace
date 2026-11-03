@@ -357,7 +357,7 @@ def process_camera_frame(
 
         # 2. Quality check (allows genuine faces in variable ambient lighting to proceed)
         is_quality_ok, quality_msg = evaluate_face_quality(crop)
-        if not is_quality_ok and detected["score"] < 0.72:
+        if not is_quality_ok and detected["score"] < 0.65:
             face_results.append(DetectedFaceResult(
                 box=box,
                 confidence=round(detected["score"], 3),

@@ -170,11 +170,11 @@ const FaceRegistrationPage = () => {
       if (video.videoWidth === 0) return;
 
       const canvas = document.createElement('canvas');
-      canvas.width = 320;
-      canvas.height = 240;
+      canvas.width = 480;
+      canvas.height = 360;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const frameData = canvas.toDataURL('image/jpeg', 0.6);
+      const frameData = canvas.toDataURL('image/jpeg', 0.85);
 
       try {
         const res = await api.post('/student/validate-frame', { image_base64: frameData });

@@ -34,6 +34,19 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[{settings.PROJECT_NAME}] Seed initialization note: {e}")
 
+    # 4. Preload and warm up face detection & recognition models into RAM
+    try:
+        import torch
+        torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
+        from app.ai.detector import FaceDetector
+        from app.ai.recognizer import FaceRecognizer
+        FaceDetector()._ensure_model()
+        FaceRecognizer()._ensure_model()
+        print(f"[{settings.PROJECT_NAME}] AI Vision models preloaded and warmed up in RAM.")
+    except Exception as e:
+        print(f"[{settings.PROJECT_NAME}] AI Vision warm-up note: {e}")
+
     yield
     print(f"[{settings.PROJECT_NAME}] Shutting down.")
 
