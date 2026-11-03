@@ -1,0 +1,8 @@
+# Ignore Python AI backend to prevent Vercel Lambda 500MB size limit errors
+backend/
+neuroface-api/
+*.db
+venv/
+.env
+.git/
+Dockerfile
