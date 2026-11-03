@@ -4,6 +4,7 @@
   "description": "NeuroFace Monorepo Root Scripts",
   "private": true,
   "scripts": {
+    "build": "npm --prefix frontend install && npm --prefix frontend run build",
     "dev": "concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue,teal\" \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "start": "concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue,teal\" \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
     "backend": "npm --prefix backend run dev",
