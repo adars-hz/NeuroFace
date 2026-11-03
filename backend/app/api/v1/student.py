@@ -20,6 +20,7 @@ from app.ai.quality import evaluate_face_quality
 from app.ai.anti_spoof import evaluate_face_authenticity
 from app.services.attendance_calculator import calculate_student_full_report
 
+import cv2
 import numpy as np
 
 router = APIRouter()
@@ -192,42 +193,50 @@ def validate_single_frame(
 ):
     """Check one camera frame before the student starts the real capture."""
     try:
-        image = decode_base64_image(payload.image_base64)
-    except Exception as exc:
-        return {"valid": False, "message": str(exc)}
+        try:
+            image = decode_base64_image(payload.image_base64)
+            if image.shape[1] > 480:
+                scale = 480.0 / image.shape[1]
+                image = cv2.resize(image, (480, int(image.shape[0] * scale)))
+        except Exception as exc:
+            return {"valid": False, "message": str(exc)}
 
-    detected = face_detector.detect_faces(image)
-    if len(detected) == 0:
-        return {"valid": False, "message": "No face detected. Please position your face inside the guide oval."}
-    if len(detected) > 1:
-        return {"valid": False, "message": "Multiple faces detected! Please ensure only you are visible."}
+        detected = face_detector.detect_faces(image)
+        if len(detected) == 0:
+            return {"valid": False, "message": "No face detected. Please position your face inside the guide oval."}
+        if len(detected) > 1:
+            return {"valid": False, "message": "Multiple faces detected! Please ensure only you are visible."}
 
-    face = detected[0]
-    is_authentic, auth_status, auth_reason = evaluate_face_authenticity(
-        full_frame=image,
-        box=face["box"],
-        crop_bgr=face["crop"],
-        landmarks=face.get("landmarks"),
-        detection_score=face["score"],
-        is_registration=True
-    )
-    if not is_authentic:
-        if auth_status == "SPOOF_DETECTED":
-            return {"valid": False, "message": "Phone/Screen display detected. Live physical face required."}
-        elif auth_status == "NON_FACE_OBJECT":
-            return {"valid": False, "message": "Invalid facial structure. Please face the camera directly."}
-        return {"valid": False, "message": auth_reason}
+        face = detected[0]
+        is_authentic, auth_status, auth_reason = evaluate_face_authenticity(
+            full_frame=image,
+            box=face["box"],
+            crop_bgr=face["crop"],
+            landmarks=face.get("landmarks"),
+            detection_score=face["score"],
+            is_registration=True
+        )
+        if not is_authentic:
+            if auth_status == "SPOOF_DETECTED":
+                return {"valid": False, "message": "Phone/Screen display detected. Live physical face required."}
+            elif auth_status == "NON_FACE_OBJECT":
+                return {"valid": False, "message": "Invalid facial structure. Please face the camera directly."}
+            return {"valid": False, "message": auth_reason}
 
-    is_ok, quality_message = evaluate_face_quality(face["crop"])
-    if not is_ok:
-        return {"valid": False, "message": quality_message}
+        is_ok, quality_message = evaluate_face_quality(face["crop"])
+        if not is_ok:
+            return {"valid": False, "message": quality_message}
 
-    return {
-        "valid": True,
-        "message": "Face clear & well-positioned. Ready to capture!",
-        "box": face["box"],
-        "score": round(face["score"], 3)
-    }
+        return {
+            "valid": True,
+            "message": "Face clear & well-positioned. Ready to capture!",
+            "box": face["box"],
+            "score": round(face["score"], 3)
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"valid": False, "message": f"Analyzing frame: {str(e)}"}
 
 
 def average_embeddings(embeddings: List[np.ndarray]) -> np.ndarray:
