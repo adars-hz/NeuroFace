@@ -12,6 +12,7 @@ backend_dir = os.path.join(project_root, "backend")
 added_files = [
     (os.path.join(current_dir, "scanner_web"), "scanner_web"),
     (os.path.join(current_dir, "dashboard_web"), "dashboard_web"),
+    (os.path.join(current_dir, "server.py"), "."),
     (os.path.join(backend_dir, "app"), "app"),
     (os.path.join(backend_dir, "neuroface.db"), "."),
 ]
@@ -75,3 +76,4 @@ coll = COLLECT(
     upx_exclude=[],
     name='NeuroFace-Teacher-Server',
 )
+

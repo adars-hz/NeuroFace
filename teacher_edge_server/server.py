@@ -8,12 +8,17 @@ import base64
 from datetime import datetime, timezone, date, timedelta
 from typing import Dict, Any, Optional
 
-# Link to existing backend models and AI packages
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
-BACKEND_DIR = os.path.join(PROJECT_ROOT, "backend")
-if BACKEND_DIR not in sys.path:
-    sys.path.insert(0, BACKEND_DIR)
+# Link to backend models and AI packages with PyInstaller frozen bundle support
+if getattr(sys, 'frozen', False):
+    CURRENT_DIR = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    if CURRENT_DIR not in sys.path:
+        sys.path.insert(0, CURRENT_DIR)
+else:
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+    BACKEND_DIR = os.path.join(PROJECT_ROOT, "backend")
+    if BACKEND_DIR not in sys.path:
+        sys.path.insert(0, BACKEND_DIR)
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse

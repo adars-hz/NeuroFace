@@ -11,14 +11,19 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from PIL import Image, ImageTk
 
-# Link to current directory and backend
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
-BACKEND_DIR = os.path.join(PROJECT_ROOT, "backend")
-if BACKEND_DIR not in sys.path:
-    sys.path.insert(0, BACKEND_DIR)
-
-from teacher_edge_server.server import app, get_local_lan_ip, SERVER_PORT
+# Link to current directory and backend with PyInstaller frozen support
+if getattr(sys, 'frozen', False):
+    CURRENT_DIR = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    if CURRENT_DIR not in sys.path:
+        sys.path.insert(0, CURRENT_DIR)
+    from server import app, get_local_lan_ip, SERVER_PORT
+else:
+    CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+    PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
+    BACKEND_DIR = os.path.join(PROJECT_ROOT, "backend")
+    if BACKEND_DIR not in sys.path:
+        sys.path.insert(0, BACKEND_DIR)
+    from teacher_edge_server.server import app, get_local_lan_ip, SERVER_PORT
 import uvicorn
 
 
@@ -312,3 +317,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -73,3 +73,4 @@ teacher_edge_server\build_exe.bat
      - 🟢 Green celebration banner displays: **"✓ Attendance Recorded: [Name] ([RegNo]) — Pass Phone to Next Student"**.
    - The student hands the phone to their classmate.
    - The teacher's laptop screen updates instantly in real time!
+

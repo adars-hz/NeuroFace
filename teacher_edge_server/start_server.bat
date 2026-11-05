@@ -11,3 +11,4 @@ if %ERRORLEVEL% NEQ 0 (
     echo Server closed with an error. Check logs above.
     pause
 )
+
