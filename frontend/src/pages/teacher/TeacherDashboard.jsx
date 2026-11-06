@@ -62,12 +62,12 @@ const TeacherDashboard = () => {
 
   return (
     <div className="space-y-8">
-      {/* Teacher Hero Banner - Academic Theme */}
-      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border border-slate-800 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-500/10 blur-3xl pointer-events-none"></div>
+      {/* Collegiate Faculty Hero Banner */}
+      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-[#0c2340] via-[#091a30] to-[#061325] border border-[#152e52] text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-600/10 blur-3xl pointer-events-none"></div>
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30">
+            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-blue-900/80 text-amber-300 border border-blue-700">
               {user?.is_hod
                 ? 'Head of Department (HOD)'
                 : user?.is_class_advisor
@@ -75,38 +75,38 @@ const TeacherDashboard = () => {
                 : 'Faculty Member'}
             </span>
             {user?.is_hod && (
-              <span className="text-xs font-semibold text-purple-300 flex items-center">
-                <Award className="w-3.5 h-3.5 mr-1 text-purple-400" /> Elevated Privileges Active
+              <span className="text-xs font-semibold text-amber-300 flex items-center">
+                <Award className="w-3.5 h-3.5 mr-1 text-amber-400" /> Elevated Privileges Active
               </span>
             )}
             {user?.is_class_advisor && !user?.is_hod && (
-              <span className="text-xs font-semibold text-indigo-300 flex items-center">
-                <Award className="w-3.5 h-3.5 mr-1 text-indigo-400" /> Class Advisor Privileges
+              <span className="text-xs font-semibold text-blue-200 flex items-center">
+                <Award className="w-3.5 h-3.5 mr-1 text-blue-300" /> Class Advisor Privileges
               </span>
             )}
           </div>
           <h1 className="text-3xl font-extrabold font-heading text-white">
             Welcome back, {user?.full_name}!
           </h1>
-          <p className="text-slate-300 text-sm leading-relaxed">
-            Conduct multi-face AI attendance sessions, track classroom registers, and review student leave letters with automated OCR verification.
+          <p className="text-blue-200/90 text-sm leading-relaxed">
+            Conduct multi-face AI biometric roll-calls, track classroom registers, and review student medical leave letters with automated OCR verification.
           </p>
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <Link
               to="/teacher/start-session"
-              className="inline-flex items-center px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors shadow-md shadow-blue-500/25"
+              className="inline-flex items-center px-5 py-3 rounded-xl bg-blue-800 hover:bg-blue-700 text-white font-bold text-sm transition-colors shadow-md shadow-blue-950/20 border border-blue-600"
             >
-              <Camera className="w-4 h-4 mr-2" />
+              <Camera className="w-4 h-4 mr-2 text-amber-300" />
               Start Attendance Session
             </Link>
             <Link
               to="/teacher/leaves"
-              className="inline-flex items-center px-5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition-colors border border-slate-700"
+              className="inline-flex items-center px-5 py-3 rounded-xl bg-[#0e223b] hover:bg-[#142e4f] text-slate-200 font-semibold text-sm transition-colors border border-[#1e3c66]"
             >
-              <FileText className="w-4 h-4 mr-2 text-blue-400" />
+              <FileText className="w-4 h-4 mr-2 text-blue-300" />
               Review Leaves & OCR
               {pendingCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-extrabold bg-rose-600 text-white">
+                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-bold bg-rose-600 text-white">
                   {pendingCount}
                 </span>
               )}
@@ -116,24 +116,24 @@ const TeacherDashboard = () => {
       </div>
 
       {/* STUDENT LEAVES & MEDICAL CERTIFICATES ACTION CENTER */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-5 transition-colors">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+      <div className="bg-white dark:bg-[#0e1b2f] rounded-3xl border border-slate-200 dark:border-[#1e3556] shadow-sm p-6 space-y-5 transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-[#1e3556] pb-4">
           <div>
             <div className="flex items-center space-x-2">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
                 Student Leaves & Medical Certificates
               </h2>
               {pendingCount > 0 ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900">
                   {pendingCount} Action Required
                 </span>
               ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                  <CheckCircle2 className="w-3 h-3 mr-1 text-black" /> Up to Date
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600 dark:text-emerald-400" /> Up to Date
                 </span>
               )}
             </div>
-            <p className="text-xs text-neutral-500 mt-0.5">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {user?.is_hod
                 ? 'Department-wide leave requests and medical certificates requiring HOD review'
                 : user?.is_class_advisor

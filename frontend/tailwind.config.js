@@ -9,23 +9,23 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        heading: ['Inter', 'Space Grotesk', 'sans-serif'],
+        heading: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       colors: {
-        // Core Academic & Attendance Brand Palette (Professional Deep Blue)
+        // Collegiate Navy & Royal Blue Theme
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',
-          600: '#2563eb', // Primary Academic Blue
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#0f172a',
+          50: '#f0f7ff',
+          100: '#e0effe',
+          200: '#bae0fd',
+          300: '#7cc8fc',
+          400: '#36abf8',
+          500: '#0c8fe9',
+          600: '#0270c7',
+          700: '#0359a1',
+          800: '#074c85',
+          900: '#0c406e',
+          950: '#072849', // Oxford Deep Navy
         },
         primary: {
           50: '#eff6ff',
@@ -34,14 +34,23 @@ export default {
           300: '#93c5fd',
           400: '#60a5fa',
           500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#0f172a',
+          600: '#1d4ed8', // Collegiate Blue
+          700: '#1e40af', // Deep Navy
+          800: '#1e3a8a',
+          900: '#0c2340',
+          950: '#061325',
         },
-        // Attendance Specific Semantic Scales:
-        // Emerald = Present, Enrolled, Approved, Eligible
+        // University Academic Accent Scales:
+        academic: {
+          navy: '#0c2340',
+          blue: '#1d4ed8',
+          gold: '#d97706',
+          amber: '#b45309',
+          crimson: '#be123c',
+          forest: '#047857',
+        },
+        // Attendance Status Scales:
+        // Emerald = Present, Enrolled, Approved, Exam Eligible
         emerald: {
           50: '#ecfdf5',
           100: '#d1fae5',
@@ -55,7 +64,7 @@ export default {
           900: '#064e3b',
           950: '#022c22',
         },
-        // Rose / Red = Absent, Below 75% Warning, Spoof Alert
+        // Rose / Crimson = Absent, Below 75% Warning, Defaulter
         rose: {
           50: '#fff1f2',
           100: '#ffe4e6',
@@ -69,7 +78,7 @@ export default {
           900: '#881337',
           950: '#4c0519',
         },
-        // Amber = Pending Verification, Medical Review, Confirming
+        // Amber = Medical Leave Review, Condonation Consideration, Pending
         amber: {
           50: '#fffbeb',
           100: '#fef3c7',
@@ -83,7 +92,6 @@ export default {
           900: '#78350f',
           950: '#451a03',
         },
-        // Blue / Indigo = Courses, Timetable, Academic Batches
         blue: {
           50: '#eff6ff',
           100: '#dbeafe',
@@ -91,11 +99,11 @@ export default {
           300: '#93c5fd',
           400: '#60a5fa',
           500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#0f172a',
+          600: '#1d4ed8',
+          700: '#1e40af',
+          800: '#1e3a8a',
+          900: '#0c2340',
+          950: '#061325',
         },
         indigo: {
           50: '#eef2ff',

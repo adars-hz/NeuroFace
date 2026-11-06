@@ -43,8 +43,8 @@ const Sidebar = ({ isOpen, onClose }) => {
   const linkClass = ({ isActive }) =>
     `flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
       isActive
-        ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/25 font-semibold'
-        : 'text-slate-600 dark:text-slate-400 hover:bg-blue-50/70 dark:hover:bg-slate-800/60 hover:text-blue-600 dark:hover:text-blue-400'
+        ? 'bg-blue-900 dark:bg-blue-800 text-white shadow-sm font-bold border-l-4 border-amber-400'
+        : 'text-slate-700 dark:text-slate-300 hover:bg-blue-50/80 dark:hover:bg-slate-800/70 hover:text-blue-900 dark:hover:text-blue-200'
     }`;
 
   return (
@@ -58,11 +58,11 @@ const Sidebar = ({ isOpen, onClose }) => {
         />
       )}
 
-      {/* Main Sidebar (Drawer on mobile, Static column on desktop) */}
+      {/* Main Collegiate Sidebar */}
       <aside
         className={`
           fixed md:static inset-y-0 left-0 z-50
-          w-72 md:w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800
+          w-72 md:w-64 bg-white dark:bg-[#0e1b2f] border-r border-slate-200 dark:border-[#1e3556]
           flex flex-col justify-between p-4
           min-h-screen md:min-h-[calc(100vh-4rem)]
           transform transition-transform duration-300 ease-in-out
@@ -72,13 +72,13 @@ const Sidebar = ({ isOpen, onClose }) => {
       >
         <div className="space-y-6">
           {/* Mobile Drawer Header */}
-          <div className="pb-3 mb-2 border-b border-slate-200 dark:border-slate-800 md:hidden space-y-3">
+          <div className="pb-3 mb-2 border-b border-slate-200 dark:border-[#1e3556] md:hidden space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-sm">
-                  <GraduationCap className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-lg bg-blue-900 flex items-center justify-center text-white shadow-sm border border-blue-800">
+                  <GraduationCap className="w-4 h-4 text-amber-300" />
                 </div>
-                <span className="font-bold font-heading text-slate-900 dark:text-white text-base">NeuroFace SIS</span>
+                <span className="font-bold font-heading text-slate-900 dark:text-white text-base">Campus ERP</span>
               </div>
               <button
                 onClick={onClose}
@@ -89,17 +89,19 @@ const Sidebar = ({ isOpen, onClose }) => {
               </button>
             </div>
             {/* User Profile Pill in Mobile Drawer */}
-            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-sm">
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-[#112138] border border-slate-200 dark:border-[#1e3556] flex items-center space-x-2.5">
+              <div className="w-8 h-8 rounded-full bg-blue-900 text-amber-300 font-bold flex items-center justify-center text-xs shrink-0 shadow-sm border border-blue-700">
                 {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-bold text-slate-900 dark:text-white truncate">{user?.full_name || user?.username}</div>
-                <div className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold truncate">
+                <div className="text-[10px] text-blue-800 dark:text-blue-300 font-bold truncate">
                   {user?.role === 'TEACHER' && user?.is_hod
                     ? 'HOD / Faculty Member'
                     : user?.role === 'TEACHER' && user?.is_class_advisor
                     ? `Class Advisor (${user.advised_class_names?.[0] || 'Active'})`
+                    : user?.role === 'ADMIN'
+                    ? 'System Administrator'
                     : user?.role}
                 </div>
               </div>
@@ -109,8 +111,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* ADMIN NAVIGATION */}
           {role === 'ADMIN' && (
             <div>
-              <div className="px-3 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                Institutional Administration
+              <div className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                University Administration
               </div>
               <nav className="space-y-1">
                 <NavLink to="/admin" end className={linkClass} onClick={handleLinkClick}>
@@ -119,19 +121,19 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </NavLink>
                 <NavLink to="/admin/academic" className={linkClass} onClick={handleLinkClick}>
                   <BookOpen className="w-4 h-4" />
-                  <span>Academic Classes & Slots</span>
+                  <span>Curriculum & Slots</span>
                 </NavLink>
                 <NavLink to="/admin/teachers" className={linkClass} onClick={handleLinkClick}>
                   <Users className="w-4 h-4" />
-                  <span>Faculty & HOD Roster</span>
+                  <span>Faculty Directory</span>
                 </NavLink>
                 <NavLink to="/admin/students" className={linkClass} onClick={handleLinkClick}>
                   <GraduationCap className="w-4 h-4" />
-                  <span>Student Directory</span>
+                  <span>Student Registry</span>
                 </NavLink>
                 <NavLink to="/admin/assignments" className={linkClass} onClick={handleLinkClick}>
                   <CheckSquare className="w-4 h-4" />
-                  <span>Course Assignments</span>
+                  <span>Faculty Assignments</span>
                 </NavLink>
                 <NavLink to="/admin/database" className={linkClass} onClick={handleLinkClick}>
                   <Database className="w-4 h-4" />
@@ -157,21 +159,21 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* TEACHER NAVIGATION */}
           {role === 'TEACHER' && (
             <div>
-              <div className="px-3 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                Faculty Attendance Portal
+              <div className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                Faculty Attendance Desk
               </div>
               <nav className="space-y-1">
                 <NavLink to="/teacher" end className={linkClass} onClick={handleLinkClick}>
                   <LayoutDashboard className="w-4 h-4" />
-                  <span>Faculty Dashboard</span>
+                  <span>Faculty Overview</span>
                 </NavLink>
                 <NavLink to="/teacher/start-session" className={linkClass} onClick={handleLinkClick}>
                   <Camera className="w-4 h-4" />
-                  <span>Conduct Live Roll-Call</span>
+                  <span>Conduct Biometric Roll-Call</span>
                 </NavLink>
                 <NavLink to="/teacher/leaves" className={linkClass} onClick={handleLinkClick}>
                   <FileText className="w-4 h-4" />
-                  <span className="flex-1">Medical Leaves & OCR</span>
+                  <span className="flex-1">Review Medical Leaves</span>
                   {pendingLeavesCount > 0 && (
                     <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">
                       {pendingLeavesCount}
@@ -186,20 +188,20 @@ const Sidebar = ({ isOpen, onClose }) => {
 
               {/* CLASS ADVISOR ELEVATED TOOLS */}
               {isAdvisor && !isHod && (
-                <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
-                  <div className="px-3 flex items-center justify-between text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
+                <div className="mt-6 pt-5 border-t border-slate-200 dark:border-[#1e3556]">
+                  <div className="px-3 flex items-center justify-between text-[10px] font-bold text-blue-900 dark:text-blue-300 uppercase tracking-widest mb-2">
                     <div className="flex items-center space-x-1.5">
-                      <Award className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <Award className="w-3.5 h-3.5 text-blue-800 dark:text-blue-400" />
                       <span>Class Advisor Desk</span>
                     </div>
-                    <span className="text-[10px] bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-1.5 py-0.5 rounded-md font-semibold truncate max-w-[100px]" title={advisedClasses.join(', ')}>
+                    <span className="text-[10px] bg-blue-50 dark:bg-blue-950/80 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-1.5 py-0.5 rounded-md font-bold truncate max-w-[100px]" title={advisedClasses.join(', ')}>
                       {advisedClasses[0] || 'Advisor'}
                     </span>
                   </div>
                   <nav className="space-y-1">
                     <NavLink to="/teacher/assignments" className={linkClass} onClick={handleLinkClick}>
                       <CheckSquare className="w-4 h-4" />
-                      <span>Timetable & Slot Allocation</span>
+                      <span>Timetable Workload</span>
                     </NavLink>
                     <NavLink to="/teacher/student-reports" className={linkClass} onClick={handleLinkClick}>
                       <FileCheck2 className="w-4 h-4" />
@@ -211,10 +213,10 @@ const Sidebar = ({ isOpen, onClose }) => {
 
               {/* HOD CONDITIONAL ELEVATION SECTION */}
               {isHod && (
-                <div className="mt-6 pt-5 border-t border-slate-200 dark:border-slate-800">
-                  <div className="px-3 flex items-center space-x-2 text-[11px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider mb-2">
+                <div className="mt-6 pt-5 border-t border-slate-200 dark:border-[#1e3556]">
+                  <div className="px-3 flex items-center space-x-1.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-2">
                     <ShieldAlert className="w-3.5 h-3.5" />
-                    <span>Department HOD Desk</span>
+                    <span>Head of Department (HOD)</span>
                   </div>
                   <nav className="space-y-1">
                     <NavLink to="/teacher/hod-overview" className={linkClass} onClick={handleLinkClick}>
@@ -223,7 +225,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </NavLink>
                     <NavLink to="/teacher/medical-waivers" className={linkClass} onClick={handleLinkClick}>
                       <FileCheck2 className="w-4 h-4" />
-                      <span>Grant Medical Waivers</span>
+                      <span>Medical Condonation Waivers</span>
                     </NavLink>
                     <NavLink to="/admin/teachers" className={linkClass} onClick={handleLinkClick}>
                       <Users className="w-4 h-4" />
@@ -231,15 +233,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </NavLink>
                     <NavLink to="/admin/students" className={linkClass} onClick={handleLinkClick}>
                       <GraduationCap className="w-4 h-4" />
-                      <span>Student Profiles</span>
+                      <span>Student Roster</span>
                     </NavLink>
                     <NavLink to="/admin/academic" className={linkClass} onClick={handleLinkClick}>
                       <BookOpen className="w-4 h-4" />
-                      <span>Subject Curriculum</span>
+                      <span>Academic Curriculum</span>
                     </NavLink>
                     <NavLink to="/admin/assignments" className={linkClass} onClick={handleLinkClick}>
                       <CheckSquare className="w-4 h-4" />
-                      <span>Workload Assignments</span>
+                      <span>Course Allocations</span>
                     </NavLink>
                   </nav>
                 </div>
@@ -250,8 +252,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           {/* STUDENT NAVIGATION */}
           {role === 'STUDENT' && (
             <div>
-              <div className="px-3 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                Student Portal
+              <div className="px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">
+                Student Academic Record
               </div>
               <nav className="space-y-1">
                 <NavLink to="/student" end className={linkClass} onClick={handleLinkClick}>
@@ -264,15 +266,15 @@ const Sidebar = ({ isOpen, onClose }) => {
                 </NavLink>
                 <NavLink to="/student/my-attendance" className={linkClass} onClick={handleLinkClick}>
                   <UserCheck className="w-4 h-4" />
-                  <span>Attendance Percentage (85%)</span>
+                  <span>Subject Attendance (85%)</span>
                 </NavLink>
                 <NavLink to="/student/apply-leave" className={linkClass} onClick={handleLinkClick}>
                   <FileText className="w-4 h-4" />
-                  <span>Submit Medical Leave</span>
+                  <span>Submit Medical Certificate</span>
                 </NavLink>
                 <NavLink to="/student/history" className={linkClass} onClick={handleLinkClick}>
                   <History className="w-4 h-4" />
-                  <span>Daily Attendance Log</span>
+                  <span>Daily Attendance Ledger</span>
                 </NavLink>
               </nav>
             </div>
@@ -281,15 +283,15 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {/* Footer Info & Appearance Switch */}
         <div className="space-y-3 mt-6">
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl text-xs text-slate-600 dark:text-slate-400">
-            <div className="font-semibold text-slate-900 dark:text-white flex items-center justify-between">
-              <span>Attendance Engine</span>
-              <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">ACTIVE</span>
+          <div className="p-3 bg-slate-50 dark:bg-[#112138] border border-slate-200 dark:border-[#1e3556] rounded-xl text-xs text-slate-600 dark:text-slate-400">
+            <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between">
+              <span>Campus Biometrics</span>
+              <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">ONLINE</span>
             </div>
-            <div className="truncate text-[11px] text-slate-500 mt-0.5">MTCNN + ArcFace 512-D</div>
+            <div className="truncate text-[11px] text-slate-500 dark:text-slate-400 mt-1">MTCNN + ArcFace 512-D Engine</div>
             <div className="text-[10px] text-slate-600 dark:text-slate-400 font-medium mt-1.5 flex items-center space-x-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Zero-Proxy Verification Ready</span>
+              <span>85% Condonation Governance</span>
             </div>
           </div>
 
