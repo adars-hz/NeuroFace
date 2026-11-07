@@ -33,31 +33,30 @@ const StudentDashboard = () => {
 
   return (
     <div className="space-y-8">
-      {/* Student Collegiate Greeting Banner */}
-      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-[#0c2340] via-[#091a30] to-[#061325] border border-[#152e52] text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-600/10 blur-3xl pointer-events-none"></div>
+      {/* Student Greeting Banner */}
+      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10 max-w-2xl space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-blue-900/80 text-amber-300 border border-blue-700">
-            Student Academic & Attendance Record
+          <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+            Student Academic Portal
           </span>
           <h1 className="text-3xl font-extrabold font-heading text-white">
             Hello, {user?.full_name || 'Student'}!
           </h1>
-          <p className="text-blue-200/90 text-sm">
-            <b>Class / Section:</b> {profile?.class_name || 'MCA S3'} &bull; <b>University Register No (USN):</b> <span className="font-mono font-bold text-amber-300">{profile?.register_number}</span>
+          <p className="text-slate-300 text-sm">
+            <b>Class:</b> {profile?.class_name || 'MCA S3'} &bull; <b>Register No:</b> {profile?.register_number}
           </p>
           <div className="pt-2 flex flex-wrap gap-3">
             <Link
               to="/student/my-attendance"
-              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-blue-800 hover:bg-blue-700 text-white font-bold text-xs transition-colors shadow-md border border-blue-600"
+              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-teal-500 text-slate-950 font-bold text-xs hover:bg-teal-400 transition-colors shadow"
             >
-              View Subject Attendance &amp; 85% Threshold &rarr;
+              View Subject-wise Attendance &rarr;
             </Link>
             <Link
               to="/student/register-face"
-              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-[#0e223b] hover:bg-[#142e4f] text-slate-200 font-bold text-xs transition-colors border border-[#1e3c66]"
+              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-colors border border-slate-700"
             >
-              <Camera className="w-3.5 h-3.5 mr-1.5 text-amber-300" />
+              <Camera className="w-3.5 h-3.5 mr-1.5 text-teal-400" />
               Biometric Setup
             </Link>
           </div>

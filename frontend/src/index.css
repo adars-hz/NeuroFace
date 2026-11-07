@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -15,179 +15,164 @@ html.dark {
 
 body {
   margin: 0;
-  background-color: #f8fafc; /* Official Academic Slate-50 */
-  color: #0f172a;            /* High-contrast collegiate body text */
+  background-color: #fafafa;
+  color: #09090b;
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 html.dark body {
-  background-color: #0c192c; /* Oxford Navy Dark: Dignified University night theme */
-  color: #f1f5f9;
+  background-color: #09090b;
+  color: #f4f4f5;
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading {
-  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+  font-family: 'Space Grotesk', sans-serif;
   letter-spacing: -0.02em;
 }
 
 ::selection {
-  background-color: #1e3a8a;
+  background-color: #000000;
   color: #ffffff;
 }
 
 html.dark ::selection {
-  background-color: #3b82f6;
-  color: #ffffff;
+  background-color: #ffffff;
+  color: #000000;
 }
 
-/* Institutional Sleek Scrollbars */
+/* Minimalist Monochrome Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #f4f4f5;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
+  background: #a1a1aa;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #000000;
 }
 
 html.dark ::-webkit-scrollbar-track {
-  background: #091424;
+  background: #121215;
 }
 html.dark ::-webkit-scrollbar-thumb {
-  background: #1e3352;
-  border-radius: 6px;
+  background: #3f3f46;
 }
 html.dark ::-webkit-scrollbar-thumb:hover {
-  background: #2a4770;
+  background: #71717a;
 }
 
-/* Institutional Card Styling */
-.card-academic {
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 0.875rem;
-  box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05);
-  transition: all 0.2s ease;
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-html.dark .card-academic {
-  background-color: #112138;
-  border: 1px solid #1e3556;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+html.dark .glass {
+  background: rgba(18, 18, 21, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Semantic Academic Attendance Badges */
-.badge-present {
-  background-color: #ecfdf5;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
-  font-weight: 600;
-}
-html.dark .badge-present {
-  background-color: rgba(6, 78, 59, 0.4);
-  color: #6ee7b7;
-  border: 1px solid rgba(16, 185, 129, 0.4);
+/* ========================================================================= */
+/* COMPREHENSIVE DARK MODE AUTOMATION OVERLAYS                               */
+/* Automatically maps light-mode monochrome cards & components to dark mode   */
+/* ========================================================================= */
+html.dark header {
+  background-color: #0f0f13 !important;
+  border-color: #222228 !important;
 }
 
-.badge-absent {
-  background-color: #fff1f2;
-  color: #9f1239;
-  border: 1px solid #fecdd3;
-  font-weight: 600;
-}
-html.dark .badge-absent {
-  background-color: rgba(136, 19, 55, 0.4);
-  color: #fda4af;
-  border: 1px solid rgba(244, 63, 94, 0.4);
+html.dark aside {
+  background-color: #0f0f13 !important;
+  border-color: #222228 !important;
 }
 
-.badge-condonation {
-  background-color: #fffbeb;
-  color: #92400e;
-  border: 1px solid #fde68a;
-  font-weight: 600;
-}
-html.dark .badge-condonation {
-  background-color: rgba(120, 53, 15, 0.4);
-  color: #fcd34d;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-}
-
-.badge-course {
-  background-color: #eff6ff;
-  color: #1e40af;
-  border: 1px solid #bfdbfe;
-  font-weight: 600;
-}
-html.dark .badge-course {
-  background-color: rgba(30, 58, 138, 0.4);
-  color: #93c5fd;
-  border: 1px solid rgba(59, 130, 246, 0.4);
-}
-
-/* Global Dark Mode Automatic Synchronization for Academic Tables & Modules */
 html.dark .bg-white {
-  background-color: #112138 !important;
+  background-color: #141418 !important;
 }
 
-html.dark .bg-slate-50,
-html.dark .bg-neutral-50 {
-  background-color: #0f1c30 !important;
+html.dark .bg-neutral-50,
+html.dark .bg-slate-50 {
+  background-color: #18181d !important;
 }
 
-html.dark .bg-slate-100,
-html.dark .bg-neutral-100 {
-  background-color: #162a47 !important;
-  color: #f1f5f9 !important;
+html.dark .bg-neutral-100,
+html.dark .bg-slate-100 {
+  background-color: #222228 !important;
+  color: #f4f4f5 !important;
 }
 
-html.dark .border-slate-100,
-html.dark .border-neutral-100 {
-  border-color: #172b47 !important;
+html.dark .bg-neutral-200,
+html.dark .bg-slate-200 {
+  background-color: #2c2c34 !important;
 }
 
-html.dark .border-slate-200,
-html.dark .border-neutral-200,
-html.dark .border-slate-300 {
-  border-color: #1e3556 !important;
-}
-
-html.dark .text-slate-900,
-html.dark .text-neutral-900,
-html.dark .text-black {
+html.dark .text-black,
+html.dark .text-slate-900 {
   color: #ffffff !important;
 }
 
+html.dark .text-neutral-900,
+html.dark .text-slate-800,
+html.dark .text-neutral-800,
 html.dark .text-slate-700,
-html.dark .text-neutral-700,
-html.dark .text-slate-800 {
-  color: #e2e8f0 !important;
+html.dark .text-neutral-700 {
+  color: #e4e4e7 !important;
 }
 
+html.dark .text-neutral-600,
 html.dark .text-slate-600,
-html.dark .text-neutral-600 {
-  color: #94a3b8 !important;
+html.dark .text-neutral-500,
+html.dark .text-slate-500 {
+  color: #a1a1aa !important;
+}
+
+html.dark .border-neutral-200,
+html.dark .border-slate-200,
+html.dark .border-neutral-300,
+html.dark .border-slate-300 {
+  border-color: #26262e !important;
+}
+
+html.dark .border-neutral-100,
+html.dark .border-slate-100 {
+  border-color: #1e1e24 !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0e0e12 !important;
+  color: #ffffff !important;
+  border-color: #2c2c34 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #71717a !important;
 }
 
 html.dark thead {
-  background-color: #0e1b2f !important;
-  color: #94a3b8 !important;
-  border-color: #1e3556 !important;
+  background-color: #18181d !important;
+  color: #a1a1aa !important;
+  border-color: #26262e !important;
 }
 
-html.dark tr.hover\:bg-slate-50:hover,
-html.dark tr.hover\:bg-neutral-50:hover {
-  background-color: #162a47 !important;
+html.dark tr.hover\:bg-neutral-50:hover,
+html.dark tr.hover\:bg-slate-50:hover {
+  background-color: #1a1a20 !important;
 }
 
 /* Safe area insets for mobile edge-to-edge displays */
