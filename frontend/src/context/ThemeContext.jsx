@@ -7,12 +7,10 @@ export const ThemeProvider = ({ children }) => {
     try {
       const saved = localStorage.getItem('neuroface_theme');
       if (saved === 'dark' || saved === 'light') return saved;
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
     } catch (e) {
       // Fallback in case localStorage is restricted
     }
+    // Default to the clean, user-friendly white light theme
     return 'light';
   });
 
@@ -23,7 +21,7 @@ export const ThemeProvider = ({ children }) => {
       try {
         localStorage.setItem('neuroface_theme', 'dark');
         const metaTheme = document.querySelector('meta[name="theme-color"]');
-        if (metaTheme) metaTheme.setAttribute('content', '#09090b');
+        if (metaTheme) metaTheme.setAttribute('content', '#0f172a');
       } catch (e) {}
     } else {
       root.classList.remove('dark');
@@ -55,4 +53,3 @@ export const useTheme = () => {
 };
 
 export default ThemeContext;
-

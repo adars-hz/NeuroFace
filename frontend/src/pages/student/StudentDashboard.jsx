@@ -34,29 +34,29 @@ const StudentDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Student Greeting Banner */}
-      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white shadow-lg relative overflow-hidden">
+      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-700 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10 max-w-2xl space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+          <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
             Student Academic Portal
           </span>
           <h1 className="text-3xl font-extrabold font-heading text-white">
             Hello, {user?.full_name || 'Student'}!
           </h1>
-          <p className="text-slate-300 text-sm">
+          <p className="text-indigo-100 text-sm">
             <b>Class:</b> {profile?.class_name || 'MCA S3'} &bull; <b>Register No:</b> {profile?.register_number}
           </p>
           <div className="pt-2 flex flex-wrap gap-3">
             <Link
               to="/student/my-attendance"
-              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-teal-500 text-slate-950 font-bold text-xs hover:bg-teal-400 transition-colors shadow"
+              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-white text-indigo-700 font-bold text-xs hover:bg-indigo-50 transition-colors shadow"
             >
               View Subject-wise Attendance &rarr;
             </Link>
             <Link
               to="/student/register-face"
-              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-slate-800 text-white font-bold text-xs hover:bg-slate-700 transition-colors border border-slate-700"
+              className="inline-flex items-center px-4 py-2.5 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-bold text-xs transition-colors border border-indigo-400/40"
             >
-              <Camera className="w-3.5 h-3.5 mr-1.5 text-teal-400" />
+              <Camera className="w-3.5 h-3.5 mr-1.5 text-indigo-200" />
               Biometric Setup
             </Link>
           </div>
@@ -128,7 +128,7 @@ const StudentDashboard = () => {
           </div>
           <div className="text-xs text-slate-500 mt-1">Active curriculum subjects</div>
           <div className="mt-2">
-            <Link to="/student/my-attendance" className="text-xs font-bold text-teal-600 hover:text-teal-700">
+            <Link to="/student/my-attendance" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
               View Attendance Breakdown &rarr;
             </Link>
           </div>
@@ -137,11 +137,11 @@ const StudentDashboard = () => {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Leave Applications</div>
           <div className="text-3xl font-extrabold text-slate-900 font-heading mt-2">
-            <FileText className="w-8 h-8 text-teal-600 inline" />
+            <FileText className="w-8 h-8 text-indigo-600 inline" />
           </div>
           <div className="text-xs text-slate-500 mt-1">Medical leaves & waivers</div>
           <div className="mt-2">
-            <Link to="/student/apply-leave" className="text-xs font-bold text-teal-600 hover:text-teal-700">
+            <Link to="/student/apply-leave" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
               Submit Leave Certificate &rarr;
             </Link>
           </div>

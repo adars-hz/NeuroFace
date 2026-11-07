@@ -63,10 +63,10 @@ const TeacherDashboard = () => {
   return (
     <div className="space-y-8">
       {/* Teacher Hero Banner */}
-      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 text-white shadow-lg relative overflow-hidden">
+      <div className="p-6 md:p-8 rounded-3xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-blue-700 text-white shadow-lg relative overflow-hidden">
         <div className="relative z-10 max-w-2xl space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30">
+            <span className="text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-white/20 text-white border border-white/30 backdrop-blur-sm">
               {user?.is_hod
                 ? 'Head of Department (HOD)'
                 : user?.is_class_advisor
@@ -74,38 +74,38 @@ const TeacherDashboard = () => {
                 : 'Faculty Member'}
             </span>
             {user?.is_hod && (
-              <span className="text-xs font-semibold text-amber-300 flex items-center">
-                <Award className="w-3.5 h-3.5 mr-1 text-amber-400" /> Elevated Privileges Active
+              <span className="text-xs font-semibold text-amber-200 flex items-center">
+                <Award className="w-3.5 h-3.5 mr-1 text-amber-300" /> Elevated Privileges Active
               </span>
             )}
             {user?.is_class_advisor && !user?.is_hod && (
-              <span className="text-xs font-semibold text-teal-300 flex items-center">
-                <Award className="w-3.5 h-3.5 mr-1 text-teal-400" /> Class Advisor Privileges
+              <span className="text-xs font-semibold text-indigo-100 flex items-center">
+                <Award className="w-3.5 h-3.5 mr-1 text-white" /> Class Advisor Privileges
               </span>
             )}
           </div>
           <h1 className="text-3xl font-extrabold font-heading text-white">
             Welcome back, {user?.full_name}!
           </h1>
-          <p className="text-slate-300 text-sm leading-relaxed">
+          <p className="text-indigo-100 text-sm leading-relaxed">
             Conduct multi-face AI attendance sessions, track classroom reports, and review student leave letters with automated OCR verification.
           </p>
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <Link
               to="/teacher/start-session"
-              className="inline-flex items-center px-5 py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-bold text-sm hover:from-teal-400 hover:to-emerald-400 transition-colors shadow-lg shadow-teal-500/20"
+              className="inline-flex items-center px-5 py-3 rounded-xl bg-white text-indigo-700 font-extrabold text-sm hover:bg-indigo-50 transition-colors shadow"
             >
               <Camera className="w-4 h-4 mr-2" />
               Start Attendance Session
             </Link>
             <Link
               to="/teacher/leaves"
-              className="inline-flex items-center px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-sm transition-colors border border-slate-700"
+              className="inline-flex items-center px-5 py-3 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-sm transition-colors border border-indigo-400/40"
             >
-              <FileText className="w-4 h-4 mr-2 text-teal-400" />
+              <FileText className="w-4 h-4 mr-2 text-indigo-200" />
               Review Leaves & OCR
               {pendingCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-extrabold bg-teal-500 text-slate-950">
+                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-400 text-slate-950">
                   {pendingCount}
                 </span>
               )}
@@ -119,20 +119,20 @@ const TeacherDashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-lg font-bold text-black font-heading">
+              <h2 className="text-lg font-bold text-slate-900 font-heading">
                 Student Leaves & Medical Certificates
               </h2>
               {pendingCount > 0 ? (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-neutral-900 text-white border border-neutral-700">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
                   {pendingCount} Action Required
                 </span>
               ) : (
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300">
-                  <CheckCircle2 className="w-3 h-3 mr-1 text-black" /> Up to Date
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                  <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" /> Up to Date
                 </span>
               )}
             </div>
-            <p className="text-xs text-neutral-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-0.5">
               {user?.is_hod
                 ? 'Department-wide leave requests and medical certificates requiring HOD review'
                 : user?.is_class_advisor
@@ -143,7 +143,7 @@ const TeacherDashboard = () => {
 
           <Link
             to="/teacher/leaves"
-            className="text-xs font-bold text-black hover:underline flex items-center space-x-1"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center space-x-1"
           >
             <span>Open Leaves Review Hub ({leaves.length})</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -151,12 +151,12 @@ const TeacherDashboard = () => {
         </div>
 
         {pendingLeaves.length === 0 ? (
-          <div className="py-6 px-4 rounded-2xl bg-neutral-50 border border-neutral-200 text-center space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-neutral-100 text-black flex items-center justify-center mx-auto">
+          <div className="py-6 px-4 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-2">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <p className="text-sm font-semibold text-neutral-800">No Pending Leave Applications</p>
-            <p className="text-xs text-neutral-500 max-w-md mx-auto">
+            <p className="text-sm font-semibold text-slate-800">No Pending Leave Applications</p>
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
               All leave requests and medical certificates submitted by students have been reviewed.
             </p>
           </div>
@@ -167,59 +167,59 @@ const TeacherDashboard = () => {
               return (
                 <div
                   key={leave.id}
-                  className="p-5 rounded-2xl border border-neutral-200 bg-white shadow-sm space-y-4 hover:border-neutral-400 transition-all flex flex-col justify-between"
+                  className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-4 hover:border-indigo-300 hover:shadow-md transition-all flex flex-col justify-between"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-bold text-black text-sm">{leave.student_name}</h4>
-                        <span className="font-mono text-xs text-neutral-500">{leave.register_number}</span>
+                        <h4 className="font-bold text-slate-900 text-sm">{leave.student_name}</h4>
+                        <span className="font-mono text-xs text-slate-500">{leave.register_number}</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-neutral-100 text-black border border-neutral-300">
+                      <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
                         PENDING
                       </span>
                     </div>
 
                     <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center text-neutral-600">
-                        <Calendar className="w-3.5 h-3.5 mr-1.5 text-black shrink-0" />
+                      <div className="flex items-center text-slate-600">
+                        <Calendar className="w-3.5 h-3.5 mr-1.5 text-indigo-600 shrink-0" />
                         <span className="font-medium">{leave.start_date} &rarr; {leave.end_date}</span>
                       </div>
-                      <div className="flex items-center space-x-1.5 text-neutral-600">
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-neutral-100 text-black border border-neutral-300">
+                      <div className="flex items-center space-x-1.5 text-slate-600">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200">
                           {leave.day_type === 'HALF_DAY' || leave.subject_id ? 'HALF DAY' : 'FULL DAY'}
                         </span>
-                        <BookOpen className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                        <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">{leave.subject_name || 'All Subjects'}</span>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 text-neutral-700 text-xs italic">
+                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs italic">
                         "{leave.reason}"
                       </div>
                     </div>
 
                     {/* Attached OCR Document Telemetry pill */}
                     {doc ? (
-                      <div className="p-2.5 rounded-xl bg-black border border-neutral-800 text-white text-[11px] space-y-1.5">
+                      <div className="p-2.5 rounded-xl bg-slate-900 text-white text-[11px] space-y-1.5">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold truncate max-w-[150px] text-white" title={doc.file_name}>
                             📎 {doc.file_name}
                           </span>
                           {doc.ocr_result && (
-                            <span className="px-1.5 py-0.2 rounded bg-neutral-800 text-neutral-200 font-mono text-[10px] border border-neutral-700">
+                            <span className="px-1.5 py-0.2 rounded bg-indigo-900/60 text-indigo-200 font-mono text-[10px] border border-indigo-500/30">
                               {Math.round(doc.ocr_result.confidence * 100)}% OCR
                             </span>
                           )}
                         </div>
                         {doc.ocr_result?.detected_reason && (
-                          <p className="text-[10px] text-neutral-300 truncate">
-                            <span className="text-neutral-400">OCR Detected:</span> {doc.ocr_result.detected_reason}
+                          <p className="text-[10px] text-slate-300 truncate">
+                            <span className="text-slate-400">OCR Detected:</span> {doc.ocr_result.detected_reason}
                           </p>
                         )}
                         <a
                           href={doc.file_path}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center text-[10px] text-teal-400 hover:text-teal-300 underline font-semibold"
+                          className="inline-flex items-center text-[10px] text-indigo-300 hover:text-indigo-200 underline font-semibold"
                         >
                           <ExternalLink className="w-3 h-3 mr-1" /> View Uploaded File
                         </a>
@@ -238,7 +238,7 @@ const TeacherDashboard = () => {
                         setReviewModal(leave);
                         setReviewForm({ status: 'APPROVED', remarks: '' });
                       }}
-                      className="px-3 py-1.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition-colors shadow-sm"
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-colors shadow-sm"
                     >
                       Review & Decide &rarr;
                     </button>
@@ -257,22 +257,22 @@ const TeacherDashboard = () => {
             <h2 className="text-lg font-bold text-slate-900 font-heading">My Assigned Courses & Classes</h2>
             <p className="text-xs text-slate-500">Strictly authorized subjects assigned by administration</p>
           </div>
-          <span className="text-xs font-semibold px-2.5 py-1 bg-teal-50 text-teal-700 rounded-lg border border-teal-200">
+          <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200">
             {assignments.length} Authorized Courses
           </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {assignments.map((a) => (
-            <div key={a.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hover:border-teal-300 transition-all">
+            <div key={a.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hover:border-indigo-300 transition-all">
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-xs font-mono font-bold text-teal-700 uppercase px-2 py-0.5 bg-teal-50 rounded border border-teal-200">
+                  <span className="text-xs font-mono font-bold text-indigo-700 uppercase px-2 py-0.5 bg-indigo-50 rounded border border-indigo-200">
                     {a.subject_code}
                   </span>
                   <h3 className="font-bold text-slate-900 font-heading text-base mt-2">{a.subject_name}</h3>
                 </div>
-                <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+                <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
                   <BookOpen className="w-5 h-5" />
                 </div>
               </div>
@@ -284,7 +284,7 @@ const TeacherDashboard = () => {
                 </span>
                 <Link
                   to={`/teacher/start-session?assignment=${a.id}`}
-                  className="font-bold text-teal-600 hover:text-teal-700 flex items-center"
+                  className="font-bold text-indigo-600 hover:text-indigo-700 flex items-center"
                 >
                   Start Now &rarr;
                 </Link>
@@ -326,7 +326,7 @@ const TeacherDashboard = () => {
                     <td className="px-6 py-3.5 text-xs text-slate-500 font-mono">
                       {s.slot_name}
                     </td>
-                    <td className="px-6 py-3.5 text-xs font-bold text-teal-700">
+                    <td className="px-6 py-3.5 text-xs font-bold text-indigo-700">
                       {s.present_count} / {s.total_enrolled} Present
                     </td>
                     <td className="px-6 py-3.5 flex items-center space-x-2">
@@ -340,7 +340,7 @@ const TeacherDashboard = () => {
                       {s.status === 'ACTIVE' && (
                         <Link
                           to={`/teacher/live-session/${s.id}`}
-                          className="text-xs font-bold text-teal-600 hover:text-teal-700 underline"
+                          className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline"
                         >
                           Open Camera &rarr;
                         </Link>
@@ -381,7 +381,7 @@ const TeacherDashboard = () => {
                     <div className="text-slate-500">
                       {s.session_date} ({new Date(s.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
                     </div>
-                    <div className="font-bold text-teal-700">
+                    <div className="font-bold text-indigo-700">
                       {s.present_count} / {s.total_enrolled} Present
                     </div>
                   </div>
@@ -389,7 +389,7 @@ const TeacherDashboard = () => {
                   {s.status === 'ACTIVE' && (
                     <Link
                       to={`/teacher/live-session/${s.id}`}
-                      className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm mt-1"
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center space-x-1.5 shadow-sm mt-1"
                     >
                       <Camera className="w-3.5 h-3.5 mr-1" />
                       <span>Open Live Camera &rarr;</span>
@@ -582,7 +582,7 @@ const TeacherDashboard = () => {
                 <button
                   type="submit"
                   disabled={submittingReview}
-                  className="px-5 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 shadow disabled:opacity-50"
+                  className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 shadow disabled:opacity-50"
                 >
                   {submittingReview ? 'Submitting...' : 'Submit Decision'}
                 </button>
