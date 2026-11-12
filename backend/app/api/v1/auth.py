@@ -5,7 +5,7 @@ from app.database.session import get_db
 from app.core.security import verify_password, create_access_token, get_password_hash
 from app.core.user_context import describe_user
 from app.models.user import User
-from app.schemas.user import UserLogin, Token, PasswordChange
+from app.schemas.user import UserLogin, Token, PasswordChange, PasswordReset
 from app.api.deps import get_current_user
 from app.core.audit import log_audit_event
 
@@ -106,3 +106,57 @@ def change_password(
     )
 
     return {"message": "Password updated successfully"}
+
+
+@router.post("/reset-password")
+def reset_password(
+    data: PasswordReset,
+    db: Session = Depends(get_db)
+):
+    """Reset user password using their registered username or university email."""
+    raw_ident = (data.username_or_email or "").strip()
+    clean_ident = raw_ident.lower()
+    raw_new_pwd = (data.new_password or "").strip()
+
+    if not raw_ident:
+        raise HTTPException(status_code=400, detail="Username or university email is required")
+
+    if len(raw_new_pwd) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+
+    user = db.query(User).filter(
+        (func.lower(User.username) == clean_ident) |
+        (func.lower(User.email) == clean_ident) |
+        (User.username == raw_ident) |
+        (User.email == raw_ident)
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="No registered user account found with this username or email"
+        )
+
+    if not user.is_active:
+        raise HTTPException(
+            status_code=400,
+            detail="This account has been deactivated. Please contact the administrator."
+        )
+
+    user.password_hash = get_password_hash(raw_new_pwd)
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="PASSWORD_RESET",
+        entity_type="User",
+        user_id=user.id,
+        entity_id=user.id,
+        details={"username": user.username, "reset_method": "PORTAL_RESET"}
+    )
+
+    return {
+        "success": True,
+        "message": f"Password for account '{user.username}' has been reset successfully. You can now log in with your new password."
+    }
+

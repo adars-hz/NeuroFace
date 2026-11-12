@@ -29,6 +29,10 @@ class PasswordChange(BaseModel):
     old_password: str
     new_password: str
 
+class PasswordReset(BaseModel):
+    username_or_email: str
+    new_password: str
+
 class UserBase(BaseModel):
     username: str
     email: EmailStr
