@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { formatLocalDateTime } from '../../utils/dateUtils';
 import {
   Clock, CheckCircle2, XCircle, AlertCircle, ShieldAlert,
   User, Check, X, ArrowRight, MessageSquare, Filter, Camera, RefreshCw
@@ -287,7 +288,7 @@ const ApprovalsPage = () => {
                         <div className="text-slate-400">User ID #{r.requested_by_id}</div>
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-600 whitespace-nowrap">
-                        {new Date(r.created_at).toLocaleString([], {
+                        {formatLocalDateTime(r.created_at, {
                           dateStyle: 'medium',
                           timeStyle: 'short'
                         })}
@@ -422,7 +423,7 @@ const ApprovalsPage = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-xs text-slate-600 whitespace-nowrap">
-                        {new Date(r.created_at).toLocaleString([], {
+                        {formatLocalDateTime(r.created_at, {
                           dateStyle: 'medium',
                           timeStyle: 'short'
                         })}

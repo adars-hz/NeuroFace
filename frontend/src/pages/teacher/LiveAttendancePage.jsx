@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
+import { formatLocalTime } from '../../utils/dateUtils';
 import {
   Camera, CheckCircle2, UserCheck, AlertTriangle, Clock,
   StopCircle, Users, Sparkles, Shield, UserX, X, RotateCcw,
@@ -230,7 +231,9 @@ const LiveAttendancePage = () => {
             tagText = `${f.student_name} (${f.register_number}) [${Math.round((f.confidence || 0) * 100)}%]`;
           } else if (f.status === 'CONFIRMING') {
             strokeColor = '#f59e0b'; // Amber for verifying
-            tagText = `Verifying: ${f.student_name}... [${Math.round((f.confidence || 0) * 100)}%]`;
+            tagText = f.message && f.message.includes('blink')
+              ? `${f.student_name} (Please blink or nod)`
+              : `Verifying: ${f.student_name}... [${Math.round((f.confidence || 0) * 100)}%]`;
           } else if (f.status === 'LOW_QUALITY') {
             strokeColor = '#64748b'; // Slate for low quality
             tagText = 'Low Quality / Blur';
@@ -530,7 +533,7 @@ const LiveAttendancePage = () => {
                           PRESENT
                         </span>
                         <div className="text-[9px] text-slate-400 mt-0.5">
-                          {new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          {formatLocalTime(r.timestamp)}
                         </div>
                       </div>
                       <button

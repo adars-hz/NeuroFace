@@ -14,9 +14,12 @@ from app.models.attendance import (
     AttendanceSession, AttendanceRecord, FaceEmbedding,
     AttendanceSessionStatus, AttendanceStatus, VerificationMethod
 )
+from app.models.leave import LeaveApplication, LeaveStatus
 from app.schemas.attendance import (
     StartSessionRequest, SessionOut, FrameProcessRequest,
-    FrameProcessResponse, DetectedFaceResult, LiveSessionStats
+    FrameProcessResponse, DetectedFaceResult, LiveSessionStats,
+    ConsecutivePeriodSubmission, RosterBaselineResponse,
+    StudentRosterItem, PriorSessionSummary, ConsecutivePeriodResult
 )
 from app.api.deps import get_current_teacher
 from app.core.audit import log_audit_event
@@ -315,12 +318,6 @@ def process_camera_frame(
             "auth_reason": auth_reason
         })
 
-    # If any phone or screen presentation attack was detected in this frame,
-    # immediately purge all pending confirmation hits and lock the session.
-    # This guarantees a phone presentation cannot mark attendance!
-    if has_spoof_in_frame:
-        frame_tracker.record_spoof(session.id, lockout_seconds=2.0)
-
     # Pass 2: Process faces
     for item in evaluated_faces:
         detected = item["detected"]
@@ -406,7 +403,7 @@ def process_camera_frame(
                 continue
             elif not confirmed:
                 status_label = "CONFIRMING"
-                face_message = None
+                face_message = temporal_reason
             else:
                 existing_record = db.query(AttendanceRecord).filter(
                     AttendanceRecord.session_id == session.id,
@@ -535,3 +532,233 @@ def complete_attendance_session(
     )
 
     return {"message": "Attendance session completed successfully"}
+
+
+# ----------------- SMART CONSECUTIVE PERIOD ATTENDANCE (NO CAMERA NEEDED) -----------------
+
+@router.get("/roster-baseline", response_model=RosterBaselineResponse)
+def get_roster_baseline(
+    assignment_id: int,
+    session_date: Optional[date] = None,
+    clone_session_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_teacher_user: User = Depends(get_current_teacher)
+):
+    """
+    Get student roster for a class with smart baseline:
+    - Pre-populates all enrolled students
+    - Checks approved leaves for the given date (defaults to today)
+    - If clone_session_id is provided, inherits the exact attendance status from that prior session
+    - Returns prior sessions of today for this class so teacher can easily clone
+    """
+    teacher = current_teacher_user.teacher_profile
+    assignment = db.query(TeacherSubjectClassAssignment).filter(
+        TeacherSubjectClassAssignment.id == assignment_id
+    ).first()
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Course assignment not found.")
+
+    if assignment.teacher_id != teacher.id and not teacher.is_hod and current_teacher_user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Unauthorized: You are not assigned to this course.")
+
+    target_date = session_date or date.today()
+
+    # 1. Fetch all students in this class
+    students = db.query(Student).filter(Student.class_id == assignment.class_id).order_by(Student.register_number).all()
+
+    # 2. Check approved leaves for target_date
+    approved_leaves = db.query(LeaveApplication).filter(
+        LeaveApplication.status == LeaveStatus.APPROVED,
+        LeaveApplication.start_date <= target_date,
+        LeaveApplication.end_date >= target_date
+    ).all()
+    leave_map = {}
+    for leave in approved_leaves:
+        if leave.subject_id is None or leave.subject_id == assignment.subject_id:
+            leave_map[leave.student_id] = leave.reason
+
+    # 3. If clone_session_id is provided, fetch existing records from that session
+    cloned_status_map = {}
+    if clone_session_id:
+        clone_records = db.query(AttendanceRecord).filter(
+            AttendanceRecord.session_id == clone_session_id
+        ).all()
+        for r in clone_records:
+            cloned_status_map[r.student_id] = r.status
+
+    # 4. Build roster items
+    roster = []
+    for s in students:
+        is_on_leave = s.id in leave_map
+        leave_reason = leave_map.get(s.id)
+
+        if clone_session_id and s.id in cloned_status_map:
+            st = cloned_status_map[s.id]
+        elif is_on_leave:
+            st = AttendanceStatus.ABSENT
+        else:
+            st = AttendanceStatus.PRESENT
+
+        roster.append(StudentRosterItem(
+            student_id=s.id,
+            full_name=s.full_name,
+            register_number=s.register_number,
+            face_registered=s.face_registered,
+            status=st,
+            on_leave=is_on_leave,
+            leave_reason=leave_reason
+        ))
+
+    # 5. Fetch prior sessions completed on target_date for this class
+    prior_sessions = db.query(AttendanceSession).join(
+        TeacherSubjectClassAssignment,
+        AttendanceSession.assignment_id == TeacherSubjectClassAssignment.id
+    ).filter(
+        TeacherSubjectClassAssignment.class_id == assignment.class_id,
+        AttendanceSession.session_date == target_date
+    ).order_by(AttendanceSession.start_time.asc()).all()
+
+    prior_summaries = []
+    for ps in prior_sessions:
+        p_count = db.query(AttendanceRecord).filter(
+            AttendanceRecord.session_id == ps.id,
+            AttendanceRecord.status == AttendanceStatus.PRESENT
+        ).count()
+        a_count = db.query(AttendanceRecord).filter(
+            AttendanceRecord.session_id == ps.id,
+            AttendanceRecord.status == AttendanceStatus.ABSENT
+        ).count()
+        prior_summaries.append(PriorSessionSummary(
+            id=ps.id,
+            slot_id=ps.slot_id,
+            slot_name=ps.slot.name if ps.slot else "On-Demand",
+            subject_name=ps.assignment.subject.name if ps.assignment and ps.assignment.subject else "Class Session",
+            start_time=ps.start_time,
+            present_count=p_count,
+            absent_count=a_count
+        ))
+
+    return RosterBaselineResponse(
+        assignment_id=assignment.id,
+        subject_name=assignment.subject.name,
+        class_name=assignment.class_assigned.name,
+        date=target_date,
+        students=roster,
+        prior_sessions_today=prior_summaries
+    )
+
+
+@router.post("/consecutive-periods", response_model=ConsecutivePeriodResult)
+def submit_consecutive_periods_attendance(
+    req: ConsecutivePeriodSubmission,
+    db: Session = Depends(get_db),
+    current_teacher_user: User = Depends(get_current_teacher)
+):
+    """
+    Teacher records attendance for 1 or more consecutive timetable periods/slots in one go!
+    Solves the 'no classroom camera' and 'hourly time consumption' pain point.
+    """
+    teacher = current_teacher_user.teacher_profile
+    assignment = db.query(TeacherSubjectClassAssignment).filter(
+        TeacherSubjectClassAssignment.id == req.assignment_id
+    ).first()
+
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Course assignment not found.")
+
+    if assignment.teacher_id != teacher.id and not teacher.is_hod and current_teacher_user.role != "ADMIN":
+        raise HTTPException(status_code=403, detail="Unauthorized: You are not assigned to this course.")
+
+    if not req.slot_ids:
+        raise HTTPException(status_code=400, detail="Please select at least one timetable period/slot.")
+
+    target_date = req.session_date or date.today()
+    if target_date > date.today():
+        raise HTTPException(status_code=400, detail="Cannot record attendance for a future date.")
+
+    # Validate slots exist
+    slots = db.query(AttendanceSlot).filter(AttendanceSlot.id.in_(req.slot_ids)).all()
+    slot_map = {s.id: s for s in slots}
+
+    created_session_ids = []
+    now = datetime.now(timezone.utc)
+
+    present_cnt = sum(1 for r in req.records if r.status == AttendanceStatus.PRESENT)
+    absent_cnt = sum(1 for r in req.records if r.status == AttendanceStatus.ABSENT)
+
+    for slot_id in req.slot_ids:
+        slot = slot_map.get(slot_id)
+
+        # Determine start/end times based on slot or current time
+        if slot and slot.start_time and slot.end_time:
+            start_dt = datetime.combine(target_date, slot.start_time).replace(tzinfo=timezone.utc)
+            end_dt = datetime.combine(target_date, slot.end_time).replace(tzinfo=timezone.utc)
+        else:
+            start_dt = now
+            end_dt = now + timedelta(minutes=60)
+
+        # Check if an existing session exists for this assignment, slot, and date
+        existing_session = db.query(AttendanceSession).filter(
+            AttendanceSession.assignment_id == assignment.id,
+            AttendanceSession.slot_id == slot_id,
+            AttendanceSession.session_date == target_date
+        ).first()
+
+        if existing_session:
+            session = existing_session
+            session.status = AttendanceSessionStatus.COMPLETED
+            session.end_time = end_dt
+            db.query(AttendanceRecord).filter(AttendanceRecord.session_id == session.id).delete()
+        else:
+            session = AttendanceSession(
+                assignment_id=assignment.id,
+                teacher_id=teacher.id,
+                slot_id=slot_id,
+                session_date=target_date,
+                start_time=start_dt,
+                end_time=end_dt,
+                status=AttendanceSessionStatus.COMPLETED
+            )
+            db.add(session)
+            db.flush()
+
+        created_session_ids.append(session.id)
+
+        for rec in req.records:
+            db.add(AttendanceRecord(
+                session_id=session.id,
+                student_id=rec.student_id,
+                status=rec.status,
+                verification_method=VerificationMethod.MANUAL_OVERRIDE,
+                marked_by=f"{teacher.full_name} (Manual Period Entry)"
+            ))
+
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="MARK_CONSECUTIVE_ATTENDANCE",
+        entity_type="AttendanceSession",
+        user_id=current_teacher_user.id,
+        entity_id=created_session_ids[0] if created_session_ids else 0,
+        details={
+            "subject": assignment.subject.name,
+            "class": assignment.class_assigned.name,
+            "slots": [slot_map[sid].name if sid in slot_map else str(sid) for sid in req.slot_ids],
+            "total_periods": len(req.slot_ids),
+            "present_count": present_cnt,
+            "absent_count": absent_cnt,
+            "remarks": req.remarks
+        }
+    )
+
+    return ConsecutivePeriodResult(
+        message=f"Successfully recorded attendance for {len(req.slot_ids)} period(s) ({assignment.subject.name} - {assignment.class_assigned.name}).",
+        total_periods_marked=len(req.slot_ids),
+        session_ids=created_session_ids,
+        present_count=present_cnt,
+        absent_count=absent_cnt,
+        total_students=len(req.records)
+    )
+

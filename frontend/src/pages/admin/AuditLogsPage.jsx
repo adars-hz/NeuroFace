@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Activity, Clock, Shield, User, Filter } from 'lucide-react';
+import { formatLocalDateTime } from '../../utils/dateUtils';
 
 const AuditLogsPage = () => {
   const [logs, setLogs] = useState([]);
@@ -44,7 +45,7 @@ const AuditLogsPage = () => {
               {logs.map((l) => (
                 <tr key={l.id} className="hover:bg-neutral-50 font-sans">
                   <td className="px-6 py-3.5 text-neutral-500 whitespace-nowrap text-xs">
-                    {new Date(l.timestamp).toLocaleString()}
+                    {formatLocalDateTime(l.timestamp)}
                   </td>
                   <td className="px-6 py-3.5 font-semibold text-black">
                     {l.username}
@@ -80,7 +81,7 @@ const AuditLogsPage = () => {
                     {l.action}
                   </span>
                   <span className="text-[10px] text-neutral-400">
-                    {new Date(l.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                    {formatLocalDateTime(l.timestamp, { dateStyle: 'short', timeStyle: 'short' })}
                   </span>
                 </div>
 

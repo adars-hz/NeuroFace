@@ -5,7 +5,7 @@ import api from '../../services/api';
 import {
   LayoutDashboard, Users, GraduationCap, BookOpen, Clock,
   Camera, FileText, CheckSquare, Settings, Activity,
-  FileCheck2, ShieldAlert, Sliders, History, Database, Award,
+  FileCheck2, ShieldAlert, History, Database, Award,
   Sparkles, X
 } from 'lucide-react';
 import ThemeToggle from '../common/ThemeToggle';
@@ -133,10 +133,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <CheckSquare className="w-4 h-4" />
                   <span>Teacher Assignments</span>
                 </NavLink>
-                <NavLink to="/admin/fine-rules" className={linkClass} onClick={handleLinkClick}>
-                  <Sliders className="w-4 h-4" />
-                  <span>Fine & 85% Rules</span>
-                </NavLink>
                 <NavLink to="/admin/database" className={linkClass} onClick={handleLinkClick}>
                   <Database className="w-4 h-4" />
                   <span>Database Explorer</span>
@@ -170,8 +166,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <span>My Dashboard</span>
                 </NavLink>
                 <NavLink to="/teacher/start-session" className={linkClass} onClick={handleLinkClick}>
-                  <Camera className="w-4 h-4" />
-                  <span>Start Live Attendance</span>
+                  <CheckSquare className="w-4 h-4" />
+                  <span>Take Attendance</span>
                 </NavLink>
                 <NavLink to="/teacher/leaves" className={linkClass} onClick={handleLinkClick}>
                   <FileText className="w-4 h-4" />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { History, Calendar, CheckCircle2, Clock, Shield } from 'lucide-react';
+import { formatLocalTime } from '../../utils/dateUtils';
 
 const AttendanceHistoryPage = () => {
   const [history, setHistory] = useState([]);
@@ -62,7 +63,7 @@ const AttendanceHistoryPage = () => {
                       {h.teacher_name}
                     </td>
                     <td className="px-6 py-4 text-xs text-neutral-500 font-mono">
-                      {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      {formatLocalTime(h.timestamp)}
                     </td>
                     <td className="px-6 py-4">
                       <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-neutral-100 text-neutral-800 border border-neutral-300">
@@ -103,7 +104,7 @@ const AttendanceHistoryPage = () => {
                 <div className="flex items-center justify-between text-xs text-neutral-600 pt-1 border-t border-neutral-100">
                   <span>{h.date}</span>
                   <span className="font-mono text-[11px] text-neutral-500">
-                    {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatLocalTime(h.timestamp, { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
 

@@ -3,6 +3,7 @@ from collections import defaultdict, deque
 from typing import Dict, Deque, List, Optional, Tuple, Any
 from dataclasses import dataclass
 import numpy as np
+import cv2
 
 
 @dataclass
@@ -14,11 +15,12 @@ class FrameSample:
 
 class MultiFrameConfirmationBuffer:
     """
-    Buffer to ensure a student is detected across multiple consecutive clean frames
-    before officially marking attendance, with strict anti-spoof temporal liveness analysis.
-    Prevents presentation attacks using printed photos on paper or still images on mobile devices.
+    Buffer to ensure a student is detected across consecutive frames
+    before officially marking attendance, with intelligent temporal liveness analysis.
+    Prevents presentation attacks using printed photos or still images on phone screens
+    without falsely rejecting real students sitting in front of the camera.
     """
-    def __init__(self, required_hits: int = 2, window_size: int = 4, max_idle_seconds: float = 3.5):
+    def __init__(self, required_hits: int = 2, window_size: int = 5, max_idle_seconds: float = 4.0):
         self.required_hits = required_hits
         self.window_size = window_size
         self.max_idle_seconds = max_idle_seconds
@@ -26,79 +28,8 @@ class MultiFrameConfirmationBuffer:
         self._buffers: Dict[int, Dict[int, Deque[FrameSample]]] = defaultdict(
             lambda: defaultdict(lambda: deque(maxlen=window_size))
         )
-        # session_id -> lockout timestamp (when a phone/screen/photo spoof was detected)
-        self._spoof_lockouts: Dict[int, float] = {}
-
-    def record_spoof(self, session_id: int, lockout_seconds: float = 1.0):
-        """
-        When a phone, screen, or photo attack is detected, immediately purge all pending
-        confirmation hits and lock the session.
-        """
-        now = time.time()
-        self._spoof_lockouts[session_id] = now + lockout_seconds
-        if session_id in self._buffers:
-            self._buffers[session_id].clear()
-
-    def is_locked_out(self, session_id: int) -> bool:
-        """Returns True if the session is currently locked out due to a recent spoof attempt."""
-        now = time.time()
-        return now < self._spoof_lockouts.get(session_id, 0.0)
-
-    def evaluate_temporal_liveness(self, samples: List[FrameSample]) -> Tuple[bool, str]:
-        """
-        Evaluates temporal micro-movement and organic facial dynamics across consecutive frames.
-        A real human exhibits involuntary micro-movements, eye saccades/blinks, and lip micro-tension.
-        A static 2D photo (printed on paper or displayed on a mobile device) has ZERO facial
-        micro-movement across the eye and mouth regions (identical cross-correlation > 0.992).
-        """
-        if len(samples) < 2:
-            return True, "Collecting frames"
-
-        corrs = []
-        eye_corrs = []
-        mouth_corrs = []
-        maes = []
-
-        for i in range(1, len(samples)):
-            c1 = samples[i - 1].aligned_crop
-            c2 = samples[i].aligned_crop
-            if c1 is not None and c2 is not None and c1.shape == (112, 112, 3) and c2.shape == (112, 112, 3):
-                # 1. Full-face correlation
-                f1 = c1.flatten().astype(np.float32)
-                f2 = c2.flatten().astype(np.float32)
-                s1, s2 = np.std(f1), np.std(f2)
-                if s1 > 1e-3 and s2 > 1e-3:
-                    corrs.append(float(np.corrcoef(f1, f2)[0, 1]))
-                maes.append(float(np.mean(np.abs(f1 - f2))))
-
-                # 2. Eye Region ROI (y: 35 to 60, x: 25 to 88)
-                e1 = c1[35:60, 25:88].flatten().astype(np.float32)
-                e2 = c2[35:60, 25:88].flatten().astype(np.float32)
-                es1, es2 = np.std(e1), np.std(e2)
-                if es1 > 1e-3 and es2 > 1e-3:
-                    eye_corrs.append(float(np.corrcoef(e1, e2)[0, 1]))
-
-                # 3. Mouth Region ROI (y: 70 to 95, x: 32 to 80)
-                m1 = c1[70:95, 32:80].flatten().astype(np.float32)
-                m2 = c2[70:95, 32:80].flatten().astype(np.float32)
-                ms1, ms2 = np.std(m1), np.std(m2)
-                if ms1 > 1e-3 and ms2 > 1e-3:
-                    mouth_corrs.append(float(np.corrcoef(m1, m2)[0, 1]))
-
-        avg_corr = float(np.mean(corrs)) if corrs else 0.0
-        avg_eye_corr = float(np.mean(eye_corrs)) if eye_corrs else 0.0
-        avg_mouth_corr = float(np.mean(mouth_corrs)) if mouth_corrs else 0.0
-        avg_mae = float(np.mean(maes)) if maes else 99.0
-
-        # A static photo (phone photo or paper print):
-        # Both eyes and mouth are completely motionless across frames (correlation > 0.992)
-        # Or full-face correlation > 0.995 with low MAE
-        is_static = (avg_corr > 0.992 and avg_eye_corr > 0.992 and avg_mouth_corr > 0.992) or (avg_corr > 0.995 and avg_mae < 2.5)
-
-        if is_static:
-            return False, f"Static photo / phone image detected (Zero facial micro-movement: eye_corr={avg_eye_corr:.4f}, mouth_corr={avg_mouth_corr:.4f})"
-
-        return True, "Live human verified"
+        # session_id -> student_id -> float (cooldown expiry timestamp when spoof detected)
+        self._spoof_cooldowns: Dict[int, Dict[int, float]] = defaultdict(dict)
 
     def record_hit(
         self,
@@ -110,11 +41,16 @@ class MultiFrameConfirmationBuffer:
         """
         Record a positive recognition hit for a student in a session.
         Returns: (confirmed: bool, is_live: bool, message: str)
+          - (True, True, "Live human verified") -> Marks attendance as PRESENT
+          - (False, True, "Verifying (x/y)...")  -> Keeps in CONFIRMING state (amber box)
+          - (False, False, "Static photo...")   -> Flags as SPOOF_DETECTED (red box)
         """
         now = time.time()
-        # If in lockout, reject confirmation
-        if now < self._spoof_lockouts.get(session_id, 0.0):
-            return False, True, "Cooldown lockout active"
+
+        # Check if student is in spoof lockout cooldown
+        cooldown_until = self._spoof_cooldowns.get(session_id, {}).get(student_id, 0.0)
+        if now < cooldown_until:
+            return False, False, "PHONE / IMAGE DETECTED - REJECTED"
 
         hit_deque = self._buffers[session_id][student_id]
 
@@ -123,21 +59,70 @@ class MultiFrameConfirmationBuffer:
             hit_deque.popleft()
 
         hit_deque.append(FrameSample(now, landmarks, aligned_crop))
+        num_hits = len(hit_deque)
 
-        if len(hit_deque) < self.required_hits:
-            return False, True, f"Verifying ({len(hit_deque)}/{self.required_hits})"
+        # Hit 1: Initial detection, awaiting temporal verification
+        if num_hits < 2:
+            return False, True, "Verifying (1/2)"
 
-        # Evaluate temporal liveness across the required consecutive hits
-        is_live, reason = self.evaluate_temporal_liveness(list(hit_deque))
-        if not is_live:
-            # Static photo or device image detected! Clear buffers and lockout session
-            self.record_spoof(session_id, lockout_seconds=3.0)
-            return False, False, reason
+        # Evaluate temporal liveness across the last two consecutive frames
+        samples = list(hit_deque)
+        c1 = samples[-2].aligned_crop
+        c2 = samples[-1].aligned_crop
 
+        if c1 is not None and c2 is not None and c1.shape == (112, 112, 3) and c2.shape == (112, 112, 3):
+            g1 = cv2.cvtColor(c1, cv2.COLOR_BGR2GRAY).astype(np.float32)
+            g2 = cv2.cvtColor(c2, cv2.COLOR_BGR2GRAY).astype(np.float32)
+
+            # Motion compensation to eliminate natural hand tremor / camera shake
+            (shift_x, shift_y), _ = cv2.phaseCorrelate(g1, g2)
+            h, w = g1.shape[:2]
+            M = np.float32([[1, 0, -shift_x], [0, 1, -shift_y]])
+            g2_aligned = cv2.warpAffine(g2, M, (w, h))
+
+            pad = min(10, max(3, int(max(abs(shift_x), abs(shift_y)) + 1)))
+            roi1 = g1[pad:h-pad, pad:w-pad].flatten()
+            roi2 = g2_aligned[pad:h-pad, pad:w-pad].flatten()
+            s1, s2 = np.std(roi1), np.std(roi2)
+            face_corr = float(np.corrcoef(roi1, roi2)[0, 1]) if s1 > 1e-3 and s2 > 1e-3 else 0.0
+
+            # Eye ROI check (y: 35 to 60, x: 25 to 88)
+            eye1 = g1[35:60, 25:88]
+            eye2 = g2_aligned[35:60, 25:88]
+            e1_flat, e2_flat = eye1.flatten(), eye2.flatten()
+            se1, se2 = np.std(e1_flat), np.std(e2_flat)
+            eye_corr = float(np.corrcoef(e1_flat, e2_flat)[0, 1]) if se1 > 1e-3 and se2 > 1e-3 else 0.0
+            eye_mae = float(np.mean(np.abs(eye1 - eye2)))
+
+            # Natural liveness indicators:
+            # - Eye blink / wink: eye_corr < 0.92 or eye_mae >= 5.2
+            # - Natural facial micro-expression / breathing: face_corr < 0.965 or eye_corr < 0.935
+            has_eye_movement = (eye_corr < 0.92 or eye_mae >= 5.2)
+            has_micro_movement = (face_corr < 0.965 or eye_corr < 0.935)
+            is_live_movement = has_eye_movement or has_micro_movement
+
+            # If biological movement is confirmed, mark as live verified!
+            if is_live_movement:
+                return True, True, "Live human verified"
+
+            # Motionless state (could be a still human or static photo / phone screen)
+            if num_hits == 2:
+                # Live student holding very still: prompt naturally
+                return False, True, "Verifying (2/3) - please blink or nod"
+            elif num_hits == 3:
+                # Still holding motionless: prompt again
+                return False, True, "Verifying (3/3) - please blink to confirm"
+            else:
+                # Persistently motionless across 4 consecutive frames (over 3.6s with zero movement)
+                self.clear_student(session_id, student_id)
+                self._spoof_cooldowns[session_id][student_id] = now + 3.0
+                return False, False, f"Static photo / phone screen detected (corr={face_corr:.3f}, eye={eye_corr:.3f})"
+
+        # Fallback if crops are unavailable
         return True, True, "Live human verified"
 
     def clear_student(self, session_id: int, student_id: int):
-        """Clear memory buffer for a specific student in a session (e.g. after manual reset)."""
+        """Clear memory buffer for a specific student in a session."""
         if session_id in self._buffers and student_id in self._buffers[session_id]:
             del self._buffers[session_id][student_id]
 
@@ -145,7 +130,8 @@ class MultiFrameConfirmationBuffer:
         """Clear memory buffer when an attendance session ends."""
         if session_id in self._buffers:
             del self._buffers[session_id]
-        if session_id in self._spoof_lockouts:
-            del self._spoof_lockouts[session_id]
+        if session_id in self._spoof_cooldowns:
+            del self._spoof_cooldowns[session_id]
+
 
 frame_tracker = MultiFrameConfirmationBuffer()

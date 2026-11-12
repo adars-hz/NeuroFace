@@ -1,7 +1,14 @@
 from typing import Optional, List
-from datetime import datetime, date
-from pydantic import BaseModel
+from datetime import datetime, date, timezone
+from pydantic import BaseModel, field_serializer
 from app.models.attendance import AttendanceSessionStatus, AttendanceStatus, VerificationMethod
+
+def _to_utc_iso(dt: Optional[datetime]) -> Optional[str]:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
 
 class StartSessionRequest(BaseModel):
     assignment_id: int
@@ -27,6 +34,10 @@ class SessionOut(BaseModel):
     total_enrolled: Optional[int] = 0
     present_count: Optional[int] = 0
 
+    @field_serializer("start_time", "end_time")
+    def serialize_session_times(self, dt: datetime, _info):
+        return _to_utc_iso(dt)
+
     class Config:
         from_attributes = True
 
@@ -41,6 +52,10 @@ class AttendanceRecordOut(BaseModel):
     confidence_score: Optional[float]
     verification_method: VerificationMethod
     marked_by: Optional[str]
+
+    @field_serializer("timestamp")
+    def serialize_timestamp(self, dt: datetime, _info):
+        return _to_utc_iso(dt)
 
     class Config:
         from_attributes = True
@@ -85,3 +100,53 @@ class ManualAttendanceCorrection(BaseModel):
     student_id: int
     status: AttendanceStatus
     remarks: str
+
+class StudentStatusRecord(BaseModel):
+    student_id: int
+    status: AttendanceStatus
+
+class ConsecutivePeriodSubmission(BaseModel):
+    assignment_id: int
+    slot_ids: List[int]
+    session_date: Optional[date] = None
+    records: List[StudentStatusRecord]
+    remarks: Optional[str] = None
+
+class StudentRosterItem(BaseModel):
+    student_id: int
+    full_name: str
+    register_number: str
+    face_registered: bool
+    status: AttendanceStatus = AttendanceStatus.PRESENT
+    on_leave: bool = False
+    leave_reason: Optional[str] = None
+
+class PriorSessionSummary(BaseModel):
+    id: int
+    slot_id: Optional[int] = None
+    slot_name: str
+    subject_name: str
+    start_time: datetime
+    present_count: int
+    absent_count: int
+
+    @field_serializer("start_time")
+    def serialize_start_time(self, dt: datetime, _info):
+        return _to_utc_iso(dt)
+
+class RosterBaselineResponse(BaseModel):
+    assignment_id: int
+    subject_name: str
+    class_name: str
+    date: date
+    students: List[StudentRosterItem]
+    prior_sessions_today: List[PriorSessionSummary]
+
+class ConsecutivePeriodResult(BaseModel):
+    message: str
+    total_periods_marked: int
+    session_ids: List[int]
+    present_count: int
+    absent_count: int
+    total_students: int
+

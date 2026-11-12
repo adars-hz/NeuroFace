@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, timezone
 from typing import List
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -453,7 +454,10 @@ def get_attendance_history(
             "subject_code": record.session.assignment.subject.code,
             "teacher_name": record.session.teacher.full_name,
             "date": record.session.session_date,
-            "timestamp": record.timestamp,
+            "timestamp": (
+                (record.timestamp.replace(tzinfo=timezone.utc) if record.timestamp.tzinfo is None else record.timestamp).isoformat()
+                if record.timestamp else None
+            ),
             "status": record.status.value,
             "verification_method": record.verification_method.value
         } for record in records

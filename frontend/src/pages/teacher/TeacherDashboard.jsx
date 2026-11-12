@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { formatLocalTime } from '../../utils/dateUtils';
 import {
   Camera, BookOpen, Clock, Users, CheckCircle2,
   Calendar, ArrowRight, Award, ShieldAlert, FileText,
-  AlertCircle, Sparkles, ExternalLink, CheckCircle, XCircle
+  AlertCircle, Sparkles, ExternalLink, CheckCircle, XCircle, Zap
 } from 'lucide-react';
 
 const TeacherDashboard = () => {
@@ -95,8 +96,8 @@ const TeacherDashboard = () => {
               to="/teacher/start-session"
               className="inline-flex items-center px-5 py-3 rounded-xl bg-white text-indigo-700 font-extrabold text-sm hover:bg-indigo-50 transition-colors shadow"
             >
-              <Camera className="w-4 h-4 mr-2" />
-              Start Attendance Session
+              <Zap className="w-4 h-4 mr-2" />
+              Take Attendance (Smart & Live)
             </Link>
             <Link
               to="/teacher/leaves"
@@ -315,7 +316,7 @@ const TeacherDashboard = () => {
                 {sessions.slice(0, 8).map((s) => (
                   <tr key={s.id} className="hover:bg-slate-50">
                     <td className="px-6 py-3.5 text-xs text-slate-600 font-medium">
-                      {s.session_date} ({new Date(s.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                      {s.session_date} ({formatLocalTime(s.start_time, { hour: '2-digit', minute: '2-digit' })})
                     </td>
                     <td className="px-6 py-3.5 font-semibold text-slate-900">
                       {s.subject_name}
@@ -379,7 +380,7 @@ const TeacherDashboard = () => {
 
                   <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-50">
                     <div className="text-slate-500">
-                      {s.session_date} ({new Date(s.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                      {s.session_date} ({formatLocalTime(s.start_time, { hour: '2-digit', minute: '2-digit' })})
                     </div>
                     <div className="font-bold text-indigo-700">
                       {s.present_count} / {s.total_enrolled} Present
