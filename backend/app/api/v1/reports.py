@@ -192,7 +192,7 @@ def get_class_subject_report(
         total_pct += stat.effective_attendance_pct
         eligible_count += 1
 
-    avg_pct = round(total_pct / len(students), 2) if students else 100.0
+    avg_pct = round(total_pct / len(students), 2) if (students and total_sessions > 0) else 0.0
 
     return ClassSubjectReport(
         class_id=cls.id,

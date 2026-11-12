@@ -68,8 +68,8 @@ def calculate_student_subject_attendance(
             present_classes=0,
             absent_classes=0,
             waived_classes=0,
-            raw_attendance_pct=100.0,  # No classes held yet
-            effective_attendance_pct=100.0,
+            raw_attendance_pct=0.0,  # Zero classes held -> 0% attendance
+            effective_attendance_pct=0.0,
             is_eligible=True,
             requires_fine=False,
             fine_amount=0.0,
@@ -140,14 +140,17 @@ def calculate_student_full_report(db: Session, student_id: int) -> StudentAttend
 
     subject_stats: List[SubjectAttendanceStat] = []
     total_effective_pct = 0.0
+    active_subjects_count = 0
     all_eligible = True
 
     for sub in subjects:
         stat = calculate_student_subject_attendance(db, student_id, sub.id, fine_rule)
         subject_stats.append(stat)
-        total_effective_pct += stat.effective_attendance_pct
+        if stat.total_classes > 0:
+            total_effective_pct += stat.effective_attendance_pct
+            active_subjects_count += 1
 
-    overall_pct = round(total_effective_pct / len(subject_stats), 2) if subject_stats else 100.0
+    overall_pct = round(total_effective_pct / active_subjects_count, 2) if active_subjects_count > 0 else 0.0
 
     return StudentAttendanceReport(
         student_id=student.id,

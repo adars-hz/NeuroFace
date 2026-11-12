@@ -110,7 +110,7 @@ const MyAttendancePage = () => {
                 </div>
                 <div className="text-right">
                   <div className="text-2xl font-extrabold font-heading text-black">
-                    {sub.effective_attendance_pct}%
+                    {sub.total_classes === 0 ? '0%' : `${sub.effective_attendance_pct}%`}
                   </div>
                   <div className="text-[10px] text-neutral-500">Effective %</div>
                 </div>
@@ -121,7 +121,7 @@ const MyAttendancePage = () => {
                 <div className="w-full bg-neutral-200 rounded-full h-2.5 overflow-hidden">
                   <div
                     className="h-2.5 rounded-full transition-all duration-500 bg-black"
-                    style={{ width: `${Math.min(100, sub.effective_attendance_pct)}%` }}
+                    style={{ width: `${sub.total_classes === 0 ? 0 : Math.min(100, sub.effective_attendance_pct)}%` }}
                   ></div>
                 </div>
               </div>

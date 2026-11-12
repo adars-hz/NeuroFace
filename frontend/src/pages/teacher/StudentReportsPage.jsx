@@ -194,7 +194,7 @@ const StudentReportsPage = () => {
                         <td className="px-4 py-3 text-center">{subject.absent_classes}</td>
                         <td className="px-4 py-3 text-center">{subject.waived_classes}</td>
                         <td className="px-4 py-3 text-right font-bold text-teal-700">
-                          {subject.effective_attendance_pct}%
+                          {subject.total_classes === 0 ? '0%' : `${subject.effective_attendance_pct}%`}
                         </td>
                       </tr>
                     ))}
