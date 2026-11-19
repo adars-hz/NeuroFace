@@ -14,6 +14,7 @@ from app.schemas.user import (
 )
 from app.schemas.academic import (
     DepartmentCreate, DepartmentOut, ClassCreate, ClassOut, ClassAdvisorAssign,
+    DepartmentUpdate, ClassUpdate, SubjectUpdate, SlotUpdate,
     SubjectCreate, SubjectOut, AssignmentCreate, AssignmentOut, SlotCreate, SlotOut
 )
 from app.schemas.leave import FineRuleUpdate, FineRuleOut
@@ -86,6 +87,92 @@ def create_department(dept_in: DepartmentCreate, db: Session = Depends(get_db), 
         "message": f"Creation of department '{dept_in.name}' submitted for Admin approval.",
         "request_id": req.id
     }
+
+
+@router.put("/departments/{dept_id}", response_model=DepartmentOut)
+def update_department(
+    dept_id: int,
+    dept_in: DepartmentUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Update an existing department's code and/or name (Admin only)."""
+    dept = db.query(Department).filter(Department.id == dept_id).first()
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+
+    old_code = dept.code
+    old_name = dept.name
+
+    if dept_in.code and dept_in.code.strip():
+        new_code = dept_in.code.strip().upper()
+        if new_code != dept.code:
+            existing = db.query(Department).filter(Department.code == new_code, Department.id != dept_id).first()
+            if existing:
+                raise HTTPException(status_code=400, detail=f"Department code '{new_code}' already exists")
+            dept.code = new_code
+
+    if dept_in.name and dept_in.name.strip():
+        dept.name = dept_in.name.strip()
+
+    db.commit()
+    db.refresh(dept)
+
+    log_audit_event(
+        db,
+        action="UPDATE_DEPARTMENT",
+        entity_type="Department",
+        user_id=admin.id,
+        entity_id=dept.id,
+        details={"old_code": old_code, "new_code": dept.code, "old_name": old_name, "new_name": dept.name}
+    )
+    return dept
+
+@router.delete("/departments/{dept_id}")
+def delete_department(
+    dept_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Delete a department, safely unlinking members and cascading sub-entities (Admin only)."""
+    dept = db.query(Department).filter(Department.id == dept_id).first()
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+
+    dept_name = dept.name
+    dept_code = dept.code
+
+    # Unlink teachers and students from this department
+    db.query(Teacher).filter(Teacher.department_id == dept_id).update({Teacher.department_id: None})
+    db.query(Student).filter(Student.department_id == dept_id).update({Student.department_id: None})
+
+    # Unlink students enrolled in classes belonging to this department
+    dept_classes = db.query(Class).filter(Class.department_id == dept_id).all()
+    for c in dept_classes:
+        db.query(Student).filter(Student.class_id == c.id).update({Student.class_id: None})
+        db.delete(c)
+
+    # Clean up subjects belonging to this department
+    dept_subjects = db.query(Subject).filter(Subject.department_id == dept_id).all()
+    for s in dept_subjects:
+        from app.models.leave import LeaveApplication, MedicalWaiver, FineRecord
+        db.query(LeaveApplication).filter(LeaveApplication.subject_id == s.id).update({LeaveApplication.subject_id: None})
+        db.query(MedicalWaiver).filter(MedicalWaiver.subject_id == s.id).delete()
+        db.query(FineRecord).filter(FineRecord.subject_id == s.id).delete()
+        db.delete(s)
+
+    db.delete(dept)
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="DELETE_DEPARTMENT",
+        entity_type="Department",
+        user_id=admin.id,
+        entity_id=dept_id,
+        details={"code": dept_code, "name": dept_name}
+    )
+    return {"message": f"Department '{dept_name}' ({dept_code}) successfully deleted", "id": dept_id}
 
 # ----------------- CLASSES -----------------
 @router.get("/classes", response_model=List[ClassOut])
@@ -202,6 +289,110 @@ def create_class(cls_in: ClassCreate, db: Session = Depends(get_db), current_use
         student_count=0
     )
 
+
+@router.put("/classes/{class_id}", response_model=ClassOut)
+def update_class(
+    class_id: int,
+    cls_in: ClassUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_admin_or_hod)
+):
+    """Update class/batch name, department, semester, academic year, or advisor."""
+    cls = db.query(Class).filter(Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    if current_user.role != UserRole.ADMIN:
+        # If HOD, check department
+        hod_teacher = current_user.teacher_profile
+        if not hod_teacher or hod_teacher.department_id != cls.department_id:
+            raise HTTPException(status_code=403, detail="HOD can only update classes within their department")
+
+    old_name = cls.name
+    if cls_in.name is not None and cls_in.name.strip():
+        cls.name = cls_in.name.strip()
+
+    if cls_in.department_id is not None:
+        dept = db.query(Department).filter(Department.id == cls_in.department_id).first()
+        if not dept:
+            raise HTTPException(status_code=400, detail="Specified department does not exist")
+        cls.department_id = cls_in.department_id
+
+    if cls_in.semester is not None:
+        cls.semester = cls_in.semester
+
+    if cls_in.academic_year is not None and cls_in.academic_year.strip():
+        cls.academic_year = cls_in.academic_year.strip()
+
+    if cls_in.class_advisor_id is not None:
+        if cls_in.class_advisor_id == 0:
+            cls.class_advisor_id = None
+        else:
+            adv = db.query(Teacher).filter(Teacher.id == cls_in.class_advisor_id).first()
+            if not adv:
+                raise HTTPException(status_code=400, detail="Class advisor teacher not found")
+            cls.class_advisor_id = adv.id
+
+    db.commit()
+    db.refresh(cls)
+
+    log_audit_event(
+        db,
+        action="UPDATE_CLASS",
+        entity_type="Class",
+        user_id=current_user.id,
+        entity_id=cls.id,
+        details={"old_name": old_name, "new_name": cls.name, "dept_id": cls.department_id, "sem": cls.semester}
+    )
+
+    student_count = db.query(Student).filter(Student.class_id == cls.id).count()
+    return ClassOut(
+        id=cls.id,
+        name=cls.name,
+        department_id=cls.department_id,
+        department_name=cls.department.name if cls.department else None,
+        semester=cls.semester,
+        academic_year=cls.academic_year,
+        student_count=student_count,
+        class_advisor_id=cls.class_advisor_id,
+        class_advisor_name=cls.advisor.full_name if cls.advisor else None,
+        class_advisor_code=cls.advisor.teacher_code if cls.advisor else None
+    )
+
+@router.delete("/classes/{class_id}")
+def delete_class(
+    class_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Delete a class, safely unlinking students and cascading assignments (Admin only)."""
+    cls = db.query(Class).filter(Class.id == class_id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    c_name = cls.name
+
+    # Unlink students from this class
+    db.query(Student).filter(Student.class_id == class_id).update({Student.class_id: None})
+
+    # Delete assignments and sessions
+    assignments = db.query(TeacherSubjectClassAssignment).filter(TeacherSubjectClassAssignment.class_id == class_id).all()
+    for a in assignments:
+        db.delete(a)
+
+    db.delete(cls)
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="DELETE_CLASS",
+        entity_type="Class",
+        user_id=admin.id,
+        entity_id=class_id,
+        details={"name": c_name}
+    )
+    return {"message": f"Class '{c_name}' successfully deleted", "id": class_id}
+
 # ----------------- SUBJECTS -----------------
 @router.get("/subjects", response_model=List[SubjectOut])
 def get_subjects(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
@@ -262,6 +453,102 @@ def create_subject(sub_in: SubjectCreate, db: Session = Depends(get_db), current
         semester=sub.semester,
         total_credits=sub.total_credits
     )
+
+
+@router.put("/subjects/{subject_id}", response_model=SubjectOut)
+def update_subject(
+    subject_id: int,
+    sub_in: SubjectUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Update subject course code, name, department, semester, and credits (Admin only)."""
+    sub = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    old_code = sub.code
+    old_name = sub.name
+
+    if sub_in.code and sub_in.code.strip():
+        new_code = sub_in.code.strip().upper()
+        if new_code != sub.code:
+            existing = db.query(Subject).filter(Subject.code == new_code, Subject.id != subject_id).first()
+            if existing:
+                raise HTTPException(status_code=400, detail=f"Subject code '{new_code}' already exists")
+            sub.code = new_code
+
+    if sub_in.name and sub_in.name.strip():
+        sub.name = sub_in.name.strip()
+
+    if sub_in.department_id is not None:
+        dept = db.query(Department).filter(Department.id == sub_in.department_id).first()
+        if not dept:
+            raise HTTPException(status_code=400, detail="Department not found")
+        sub.department_id = sub_in.department_id
+
+    if sub_in.semester is not None:
+        sub.semester = sub_in.semester
+
+    if sub_in.total_credits is not None:
+        sub.total_credits = sub_in.total_credits
+
+    db.commit()
+    db.refresh(sub)
+
+    log_audit_event(
+        db,
+        action="UPDATE_SUBJECT",
+        entity_type="Subject",
+        user_id=admin.id,
+        entity_id=sub.id,
+        details={"old_code": old_code, "new_code": sub.code, "old_name": old_name, "new_name": sub.name}
+    )
+    return SubjectOut(
+        id=sub.id,
+        code=sub.code,
+        name=sub.name,
+        department_id=sub.department_id,
+        department_name=sub.department.name if sub.department else None,
+        semester=sub.semester,
+        total_credits=sub.total_credits
+    )
+
+@router.delete("/subjects/{subject_id}")
+def delete_subject(
+    subject_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Delete a subject course, safely unlinking leave applications and cascading assignments (Admin only)."""
+    sub = db.query(Subject).filter(Subject.id == subject_id).first()
+    if not sub:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+    s_code = sub.code
+    s_name = sub.name
+
+    from app.models.leave import LeaveApplication, MedicalWaiver, FineRecord
+    db.query(LeaveApplication).filter(LeaveApplication.subject_id == subject_id).update({LeaveApplication.subject_id: None})
+    db.query(MedicalWaiver).filter(MedicalWaiver.subject_id == subject_id).delete()
+    db.query(FineRecord).filter(FineRecord.subject_id == subject_id).delete()
+
+    assignments = db.query(TeacherSubjectClassAssignment).filter(TeacherSubjectClassAssignment.subject_id == subject_id).all()
+    for a in assignments:
+        db.delete(a)
+
+    db.delete(sub)
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="DELETE_SUBJECT",
+        entity_type="Subject",
+        user_id=admin.id,
+        entity_id=subject_id,
+        details={"code": s_code, "name": s_name}
+    )
+    return {"message": f"Subject '{s_name}' ({s_code}) successfully deleted", "id": subject_id}
 
 # ----------------- TEACHERS -----------------
 @router.get("/teachers", response_model=List[TeacherOut])
@@ -507,7 +794,7 @@ def delete_teacher(
 # ----------------- STUDENTS -----------------
 @router.get("/students", response_model=List[StudentOut])
 def get_students(db: Session = Depends(get_db), current_user: User = Depends(get_current_admin_or_hod)):
-    students = db.query(Student).all()
+    students = db.query(Student).order_by(Student.register_number.asc()).all()
     results = []
     for s in students:
         results.append(StudentOut(
@@ -947,6 +1234,131 @@ def get_slots(db: Session = Depends(get_db), current_user: User = Depends(get_cu
             day_of_week=s.day_of_week
         ) for s in slots
     ]
+
+
+def parse_time_str(val: str):
+    from datetime import datetime, time
+    val = val.strip()
+    parsed_time = None
+    for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p", "%I:%M%p"):
+        try:
+            parsed_time = datetime.strptime(val, fmt).time()
+            break
+        except ValueError:
+            pass
+    if parsed_time is None:
+        raise HTTPException(status_code=400, detail=f"Invalid time format: '{val}'. Expected HH:MM or HH:MM:SS format")
+    # In college schedules, hours 1 to 6 without explicit 'am' are afternoon PM hours (e.g. 01:00 -> 13:00)
+    if parsed_time.hour < 7 and "am" not in val.lower():
+        parsed_time = time(parsed_time.hour + 12, parsed_time.minute, parsed_time.second)
+    return parsed_time
+
+@router.post("/slots", response_model=SlotOut)
+def create_slot(
+    slot_in: SlotCreate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Create a new timetable lecture slot (Admin only)."""
+    st = parse_time_str(slot_in.start_time)
+    et = parse_time_str(slot_in.end_time)
+
+    slot = AttendanceSlot(
+        name=slot_in.name.strip(),
+        start_time=st,
+        end_time=et,
+        day_of_week=slot_in.day_of_week.strip() if slot_in.day_of_week else None
+    )
+    db.add(slot)
+    db.commit()
+    db.refresh(slot)
+
+    log_audit_event(
+        db,
+        action="CREATE_SLOT",
+        entity_type="AttendanceSlot",
+        user_id=admin.id,
+        entity_id=slot.id,
+        details={"name": slot.name, "start": str(st), "end": str(et)}
+    )
+    return SlotOut(
+        id=slot.id,
+        name=slot.name,
+        start_time=slot.start_time.strftime("%H:%M:%S"),
+        end_time=slot.end_time.strftime("%H:%M:%S"),
+        day_of_week=slot.day_of_week
+    )
+
+@router.put("/slots/{slot_id}", response_model=SlotOut)
+def update_slot(
+    slot_id: int,
+    slot_in: SlotUpdate,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Update timetable slot title, start time, end time, or day of week (Admin only)."""
+    slot = db.query(AttendanceSlot).filter(AttendanceSlot.id == slot_id).first()
+    if not slot:
+        raise HTTPException(status_code=404, detail="Timetable slot not found")
+
+    old_name = slot.name
+
+    if slot_in.name is not None and slot_in.name.strip():
+        slot.name = slot_in.name.strip()
+
+    if slot_in.start_time is not None and slot_in.start_time.strip():
+        slot.start_time = parse_time_str(slot_in.start_time)
+
+    if slot_in.end_time is not None and slot_in.end_time.strip():
+        slot.end_time = parse_time_str(slot_in.end_time)
+
+    if slot_in.day_of_week is not None:
+        slot.day_of_week = slot_in.day_of_week.strip() if slot_in.day_of_week.strip() else None
+
+    db.commit()
+    db.refresh(slot)
+
+    log_audit_event(
+        db,
+        action="UPDATE_SLOT",
+        entity_type="AttendanceSlot",
+        user_id=admin.id,
+        entity_id=slot.id,
+        details={"old_name": old_name, "new_name": slot.name, "start": str(slot.start_time), "end": str(slot.end_time)}
+    )
+    return SlotOut(
+        id=slot.id,
+        name=slot.name,
+        start_time=slot.start_time.strftime("%H:%M:%S"),
+        end_time=slot.end_time.strftime("%H:%M:%S"),
+        day_of_week=slot.day_of_week
+    )
+
+@router.delete("/slots/{slot_id}")
+def delete_slot(
+    slot_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_current_admin)
+):
+    """Delete a timetable slot, nullifying references in past sessions (Admin only)."""
+    slot = db.query(AttendanceSlot).filter(AttendanceSlot.id == slot_id).first()
+    if not slot:
+        raise HTTPException(status_code=404, detail="Timetable slot not found")
+
+    s_name = slot.name
+    db.query(AttendanceSession).filter(AttendanceSession.slot_id == slot_id).update({AttendanceSession.slot_id: None})
+    db.delete(slot)
+    db.commit()
+
+    log_audit_event(
+        db,
+        action="DELETE_SLOT",
+        entity_type="AttendanceSlot",
+        user_id=admin.id,
+        entity_id=slot_id,
+        details={"name": s_name}
+    )
+    return {"message": f"Timetable slot '{s_name}' successfully deleted", "id": slot_id}
 
 # ----------------- FINE RULES -----------------
 @router.get("/fine-rules", response_model=FineRuleOut)

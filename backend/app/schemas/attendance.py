@@ -141,6 +141,8 @@ class RosterBaselineResponse(BaseModel):
     date: date
     students: List[StudentRosterItem]
     prior_sessions_today: List[PriorSessionSummary]
+    previous_slot_name: Optional[str] = None
+    has_previous_slot: bool = False
 
 class ConsecutivePeriodResult(BaseModel):
     message: str

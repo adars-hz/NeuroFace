@@ -4,7 +4,8 @@ import api from '../../services/api';
 import {
   Camera, Clock, BookOpen, AlertCircle, Play, CheckCircle2,
   Users, Zap, RefreshCw, Search, CheckSquare, Square,
-  Calendar, ArrowRight, ShieldCheck, UserCheck, UserX, Award
+  Calendar, ArrowRight, ShieldCheck, UserCheck, UserX, Award,
+  Lock, Ban, AlertTriangle, ArrowUpDown
 } from 'lucide-react';
 
 const StartSessionPage = () => {
@@ -27,10 +28,17 @@ const StartSessionPage = () => {
   const [roster, setRoster] = useState([]);
   const [priorSessions, setPriorSessions] = useState([]);
   const [selectedCloneSessionId, setSelectedCloneSessionId] = useState('');
+  const [previousSlotInfo, setPreviousSlotInfo] = useState({
+    has_previous_slot: false,
+    previous_slot_name: null
+  });
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('usn_asc'); // 'usn_asc' | 'usn_desc' | 'name_asc' | 'name_desc' | 'absent_first' | 'present_first'
   const [loadingRoster, setLoadingRoster] = useState(false);
   const [submittingPeriods, setSubmittingPeriods] = useState(false);
   const [successResult, setSuccessResult] = useState(null);
+
+  const targetSlotId = selectedSlotIds.length > 0 ? selectedSlotIds[0] : null;
 
   // Live Camera Mode state
   const [liveFormData, setLiveFormData] = useState({
@@ -40,31 +48,75 @@ const StartSessionPage = () => {
   const [loadingLive, setLoadingLive] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState(null);
 
-  // 1. Load teacher's course assignments & timetable slots
-  useEffect(() => {
-    const loadMetadata = async () => {
-      try {
-        const [aRes, sRes] = await Promise.all([
-          api.get('/teacher/my-assignments'),
-          api.get('/teacher/available-slots')
-        ]);
-        setAssignments(aRes.data);
-        setSlots(sRes.data);
+  // Helper to determine if a slot's scheduled time has passed
+  const isSlotPassed = (slot, dateStr) => {
+    if (slot.is_passed) return true;
+    if (!slot.end_time || !dateStr) return false;
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    if (dateStr < todayStr) return true;
+    if (dateStr === todayStr) {
+      const [h, m] = slot.end_time.split(':').map(Number);
+      const endMinutes = h * 60 + (m || 0);
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      return nowMinutes >= endMinutes;
+    }
+    return false;
+  };
 
+  const fetchAvailableSlots = async (assignmentId, targetDate) => {
+    try {
+      const params = {};
+      if (assignmentId) params.assignment_id = parseInt(assignmentId);
+      if (targetDate) params.session_date = targetDate;
+      const res = await api.get('/teacher/available-slots', { params });
+      setSlots(res.data);
+      // Auto-deselect any slots that are disabled or have passed
+      setSelectedSlotIds((prev) =>
+        prev.filter((id) => {
+          const matched = res.data.find((s) => s.id === id);
+          return matched && !matched.is_disabled && !isSlotPassed(matched, targetDate);
+        })
+      );
+    } catch (err) {
+      console.error('Failed to load slots', err);
+    }
+  };
+
+  // 1. Load teacher's course assignments
+  useEffect(() => {
+    const loadAssignments = async () => {
+      try {
+        const aRes = await api.get('/teacher/my-assignments');
+        setAssignments(aRes.data);
         const initialAssignmentId = preselected || (aRes.data.length > 0 ? aRes.data[0].id.toString() : '');
         if (initialAssignmentId) {
           setSelectedAssignmentId(initialAssignmentId);
         }
       } catch (err) {
-        console.error('Failed to load assignments or slots', err);
+        console.error('Failed to load assignments', err);
         setError('Failed to load course assignments. Please ensure you are logged in as a faculty member.');
       }
     };
-    loadMetadata();
+    loadAssignments();
   }, [preselected]);
 
-  // 2. Fetch class roster & baseline whenever assignment, date, or clone session changes
-  const fetchRoster = async (assignmentId, targetDate, cloneId = '') => {
+  // Dynamic slot polling: reload slots on assignment/date change and periodically
+  useEffect(() => {
+    fetchAvailableSlots(selectedAssignmentId, selectedDate);
+    const timer = setInterval(() => {
+      fetchAvailableSlots(selectedAssignmentId, selectedDate);
+    }, 20000);
+    return () => clearInterval(timer);
+  }, [selectedAssignmentId, selectedDate]);
+
+  // Reset clone session whenever target slot or assigned course changes
+  useEffect(() => {
+    setSelectedCloneSessionId('');
+  }, [targetSlotId, selectedAssignmentId]);
+
+  // 2. Fetch class roster & baseline whenever assignment, date, clone session, or target slot changes
+  const fetchRoster = async (assignmentId, targetDate, cloneId = '', targetSlot = null) => {
     if (!assignmentId) return;
     setLoadingRoster(true);
     setError('');
@@ -76,9 +128,16 @@ const StartSessionPage = () => {
       if (cloneId) {
         params.clone_session_id = parseInt(cloneId);
       }
+      if (targetSlot) {
+        params.target_slot_id = parseInt(targetSlot);
+      }
       const res = await api.get('/attendance/roster-baseline', { params });
       setRoster(res.data.students);
       setPriorSessions(res.data.prior_sessions_today || []);
+      setPreviousSlotInfo({
+        has_previous_slot: Boolean(res.data.has_previous_slot),
+        previous_slot_name: res.data.previous_slot_name || null
+      });
     } catch (err) {
       console.error('Failed to load roster', err);
       setError(err.response?.data?.detail || 'Failed to load class roster baseline.');
@@ -89,17 +148,24 @@ const StartSessionPage = () => {
 
   useEffect(() => {
     if (selectedAssignmentId && activeTab === 'consecutive') {
-      fetchRoster(selectedAssignmentId, selectedDate, selectedCloneSessionId);
+      fetchRoster(selectedAssignmentId, selectedDate, selectedCloneSessionId, targetSlotId);
     }
-  }, [selectedAssignmentId, selectedDate, selectedCloneSessionId, activeTab]);
+  }, [selectedAssignmentId, selectedDate, selectedCloneSessionId, targetSlotId, activeTab]);
 
   // Handle Slot Selection Toggle (supports multiple consecutive periods)
-  const toggleSlotSelection = (slotId) => {
+  const toggleSlotSelection = (slot) => {
+    const isPassed = isSlotPassed(slot, selectedDate);
+    const isOccupiedByOther = slot.is_accessed && !slot.is_my_session;
+    const isCurrentActive = slot.is_my_session && slot.active_session_id;
+    const isDisabled = isPassed || isOccupiedByOther || (slot.is_disabled && !isCurrentActive);
+
+    if (isDisabled) return;
+
     setSelectedSlotIds((prev) => {
-      if (prev.includes(slotId)) {
-        return prev.filter((id) => id !== slotId);
+      if (prev.includes(slot.id)) {
+        return prev.filter((id) => id !== slot.id);
       } else {
-        return [...prev, slotId].sort((a, b) => a - b);
+        return [...prev, slot.id].sort((a, b) => a - b);
       }
     });
   };
@@ -127,16 +193,71 @@ const StartSessionPage = () => {
     setRoster((prev) => prev.map((s) => ({ ...s, status })));
   };
 
-  // Filtered roster for fast search
+  // Filtered and Sorted roster for fast search, roll-call, and structured marking
   const filteredRoster = useMemo(() => {
-    if (!searchQuery.trim()) return roster;
-    const q = searchQuery.toLowerCase();
-    return roster.filter(
-      (s) =>
-        s.full_name.toLowerCase().includes(q) ||
-        s.register_number.toLowerCase().includes(q)
-    );
-  }, [roster, searchQuery]);
+    let list = roster;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(
+        (s) =>
+          (s.full_name || '').toLowerCase().includes(q) ||
+          (s.register_number || '').toLowerCase().includes(q)
+      );
+    }
+
+    const sorted = [...list];
+    switch (sortBy) {
+      case 'usn_asc':
+        sorted.sort((a, b) =>
+          (a.register_number || '').localeCompare(b.register_number || '', undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          })
+        );
+        break;
+      case 'usn_desc':
+        sorted.sort((a, b) =>
+          (b.register_number || '').localeCompare(a.register_number || '', undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          })
+        );
+        break;
+      case 'name_asc':
+        sorted.sort((a, b) =>
+          (a.full_name || '').localeCompare(b.full_name || '', undefined, {
+            sensitivity: 'base',
+          })
+        );
+        break;
+      case 'name_desc':
+        sorted.sort((a, b) =>
+          (b.full_name || '').localeCompare(a.full_name || '', undefined, {
+            sensitivity: 'base',
+          })
+        );
+        break;
+      case 'absent_first':
+        sorted.sort((a, b) => {
+          if (a.status === b.status) {
+            return (a.register_number || '').localeCompare(b.register_number || '', undefined, { numeric: true });
+          }
+          return a.status === 'ABSENT' ? -1 : 1;
+        });
+        break;
+      case 'present_first':
+        sorted.sort((a, b) => {
+          if (a.status === b.status) {
+            return (a.register_number || '').localeCompare(b.register_number || '', undefined, { numeric: true });
+          }
+          return a.status === 'PRESENT' ? -1 : 1;
+        });
+        break;
+      default:
+        break;
+    }
+    return sorted;
+  }, [roster, searchQuery, sortBy]);
 
   // Live Stats calculations
   const totalEnrolled = roster.length;
@@ -294,7 +415,7 @@ const StartSessionPage = () => {
               <div className="flex flex-wrap justify-center gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => { setSuccessResult(null); fetchRoster(selectedAssignmentId, selectedDate); }}
+                  onClick={() => { setSuccessResult(null); fetchRoster(selectedAssignmentId, selectedDate, '', targetSlotId); }}
                   className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow"
                 >
                   Record Another Session
@@ -374,29 +495,83 @@ const StartSessionPage = () => {
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {slots.map((s) => {
+                        const isPassed = isSlotPassed(s, selectedDate);
+                        const isOccupiedByOther = s.is_accessed && !s.is_my_session;
+                        const isCurrentActive = s.is_my_session && s.active_session_id;
+                        const isDisabled = isPassed || isOccupiedByOther || (s.is_disabled && !isCurrentActive);
                         const isSelected = selectedSlotIds.includes(s.id);
+
                         return (
                           <button
                             type="button"
                             key={s.id}
-                            onClick={() => toggleSlotSelection(s.id)}
-                            className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
-                              isSelected
+                            disabled={isDisabled}
+                            onClick={() => toggleSlotSelection(s)}
+                            className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between relative ${
+                              isDisabled
+                                ? isOccupiedByOther
+                                  ? 'bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/60 text-amber-900 dark:text-amber-200 cursor-not-allowed opacity-90'
+                                  : isPassed
+                                  ? 'bg-slate-100/80 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-75'
+                                  : 'bg-slate-100 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-75'
+                                : isCurrentActive
+                                ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-400 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 ring-2 ring-emerald-500/20'
+                                : isSelected
                                 ? 'bg-indigo-600 text-white border-indigo-700 shadow-md ring-2 ring-indigo-500/30'
-                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-indigo-300'
+                                : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-indigo-300 hover:shadow-sm'
                             }`}
                           >
                             <div className="flex items-center justify-between w-full">
-                              <span className="font-bold text-xs">{s.name}</span>
-                              {isSelected ? (
-                                <CheckSquare className="w-4 h-4 text-white" />
+                              <span className="font-bold text-xs truncate mr-1">{s.name}</span>
+                              {isOccupiedByOther ? (
+                                <Lock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" title="Occupied by another faculty" />
+                              ) : isPassed ? (
+                                <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" title="Time passed" />
+                              ) : isCurrentActive ? (
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" title="Session active" />
+                              ) : isSelected ? (
+                                <CheckSquare className="w-4 h-4 text-white shrink-0" />
                               ) : (
-                                <Square className="w-4 h-4 text-slate-400" />
+                                <Square className="w-4 h-4 text-slate-400 shrink-0" />
                               )}
                             </div>
-                            <span className={`text-[11px] mt-1 ${isSelected ? 'text-indigo-100' : 'text-slate-500 dark:text-slate-400'}`}>
+
+                            <span className={`text-[11px] mt-1 font-mono ${
+                              isDisabled
+                                ? isOccupiedByOther
+                                  ? 'text-amber-700 dark:text-amber-300'
+                                  : 'text-slate-400 dark:text-slate-500'
+                                : isSelected
+                                ? 'text-indigo-100'
+                                : 'text-slate-500 dark:text-slate-400'
+                            }`}>
                               {s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}
                             </span>
+
+                            {/* Status Pill Badge */}
+                            {isOccupiedByOther && (
+                              <span className="mt-1.5 text-[10px] font-semibold text-amber-800 dark:text-amber-200 bg-amber-100/90 dark:bg-amber-900/50 px-1.5 py-0.5 rounded truncate w-full flex items-center gap-1">
+                                <Lock className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate">In Use: {s.accessed_by_teacher_name || 'Faculty'}</span>
+                              </span>
+                            )}
+                            {isPassed && !isOccupiedByOther && (
+                              <span className="mt-1.5 text-[10px] font-semibold text-slate-500 bg-slate-200/70 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate w-full flex items-center gap-1">
+                                <Clock className="w-2.5 h-2.5 shrink-0" />
+                                <span>Time Passed</span>
+                              </span>
+                            )}
+                            {s.is_disabled && !isPassed && !isOccupiedByOther && !isCurrentActive && (
+                              <span className="mt-1.5 text-[10px] font-semibold text-slate-500 bg-slate-200/70 dark:bg-slate-800 px-1.5 py-0.5 rounded truncate w-full flex items-center gap-1">
+                                <Ban className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate">{s.disabled_reason || 'Unavailable'}</span>
+                              </span>
+                            )}
+                            {isCurrentActive && (
+                              <span className="mt-1.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/50 px-1.5 py-0.5 rounded truncate w-full">
+                                In Progress (You)
+                              </span>
+                            )}
                           </button>
                         );
                       })}
@@ -407,36 +582,64 @@ const StartSessionPage = () => {
                   </p>
                 </div>
 
-                {/* Smart Baseline & Cloning Option */}
-                {priorSessions.length > 0 && (
-                  <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-                      Import Baseline from Earlier Period Today (Optional Clone)
-                    </label>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <select
-                        value={selectedCloneSessionId}
-                        onChange={(e) => setSelectedCloneSessionId(e.target.value)}
-                        className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800"
-                      >
-                        <option value="">Default: Fresh Roster (Auto-checks leaves & defaults to Present)</option>
-                        {priorSessions.map((ps) => (
-                          <option key={ps.id} value={ps.id}>
-                            Clone from {ps.slot_name} ({ps.subject_name}) &mdash; {ps.present_count} Present, {ps.absent_count} Absent
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => fetchRoster(selectedAssignmentId, selectedDate, selectedCloneSessionId)}
-                        className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 flex items-center justify-center space-x-1.5"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span>Reload Baseline</span>
-                      </button>
+                {/* Smart Baseline & Strictly Previous Slot Cloning Option */}
+                <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                  {selectedSlotIds.length === 0 ? (
+                    <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center space-x-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                      <span>
+                        <strong>Select Timetable Period Above:</strong> Select at least one timetable period in the grid above to activate attendance recording and view previous-slot cloning options.
+                      </span>
                     </div>
-                  </div>
-                )}
+                  ) : !previousSlotInfo.has_previous_slot ? (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-600 dark:text-slate-400 flex items-center space-x-2">
+                      <Clock className="w-4 h-4 shrink-0 text-slate-400" />
+                      <span>
+                        <strong>First Period of the Day:</strong> No preceding timetable slot exists today. Fresh roster initialized with approved leaves marked absent.
+                      </span>
+                    </div>
+                  ) : priorSessions.length === 0 ? (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-600 dark:text-slate-400 flex items-center space-x-2">
+                      <Clock className="w-4 h-4 shrink-0 text-slate-400" />
+                      <span>
+                        <strong>Previous Slot ({previousSlotInfo.previous_slot_name}):</strong> No attendance session was recorded for this class in the immediately preceding slot today. Cloning is restricted strictly to the immediately preceding slot.
+                      </span>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                          Clone Attendance from Immediately Previous Slot ({previousSlotInfo.previous_slot_name})
+                        </label>
+                        <span className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
+                          Strict Preceding Slot Rule Active
+                        </span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <select
+                          value={selectedCloneSessionId}
+                          onChange={(e) => setSelectedCloneSessionId(e.target.value)}
+                          className="flex-1 px-4 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 bg-slate-50 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">Default: Fresh Roster (Auto-checks approved leaves & defaults to Present)</option>
+                          {priorSessions.map((ps) => (
+                            <option key={ps.id} value={ps.id}>
+                              Clone from Previous Slot: {ps.slot_name} ({ps.subject_name}) &mdash; {ps.present_count} Present, {ps.absent_count} Absent
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => fetchRoster(selectedAssignmentId, selectedDate, selectedCloneSessionId, targetSlotId)}
+                          className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold rounded-xl border border-slate-300 dark:border-slate-700 flex items-center justify-center space-x-1.5"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                          <span>Reload Baseline</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Live Attendance Counter & Quick Actions Bar */}
@@ -491,24 +694,102 @@ const StartSessionPage = () => {
 
               {/* Student Roster Grid */}
               <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      Student Attendance Roster ({filteredRoster.length})
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      Tap any student card to toggle between Present and Absent in seconds
-                    </p>
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center space-x-2">
+                        <span>Student Attendance Roster ({filteredRoster.length})</span>
+                        <span className="text-[10px] font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
+                          {sortBy === 'usn_asc' && 'USN Ascending (0➔9)'}
+                          {sortBy === 'usn_desc' && 'USN Descending (9➔0)'}
+                          {sortBy === 'name_asc' && 'Name Alphabetical (A➔Z)'}
+                          {sortBy === 'name_desc' && 'Name Reverse (Z➔A)'}
+                          {sortBy === 'absent_first' && 'Absent First'}
+                          {sortBy === 'present_first' && 'Present First'}
+                        </span>
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Tap any student card to toggle between Present and Absent in seconds
+                      </p>
+                    </div>
+                    <div className="relative w-full sm:w-64">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        placeholder="Search name or USN..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full pl-9 pr-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
+                      />
+                    </div>
                   </div>
-                  <div className="relative w-full sm:w-64">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      placeholder="Search name or USN..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 border border-slate-300 dark:border-slate-700 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
-                    />
+
+                  {/* Ordering Controls: USN Number Wise & Alphabetical Order */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+                    <div className="flex items-center space-x-1.5 text-slate-500 dark:text-slate-400 font-semibold text-[11px]">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-indigo-500" />
+                      <span>Order By:</span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {/* USN Number Wise Sort Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSortBy((prev) => (prev === 'usn_asc' ? 'usn_desc' : 'usn_asc'))}
+                        className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all flex items-center space-x-1 border ${
+                          sortBy.startsWith('usn')
+                            ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                        title="Sort by Register / USN Number"
+                      >
+                        <span>USN {sortBy === 'usn_desc' ? '9➔0' : '0➔9'}</span>
+                        <span className="text-[10px] font-mono">{sortBy === 'usn_desc' ? '▼' : '▲'}</span>
+                      </button>
+
+                      {/* Alphabetical Order Sort Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSortBy((prev) => (prev === 'name_asc' ? 'name_desc' : 'name_asc'))}
+                        className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all flex items-center space-x-1 border ${
+                          sortBy.startsWith('name')
+                            ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-800 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                        title="Sort Alphabetically by Student Name"
+                      >
+                        <span>Name {sortBy === 'name_desc' ? 'Z➔A' : 'A➔Z'}</span>
+                        <span className="text-[10px] font-mono">{sortBy === 'name_desc' ? '▼' : '▲'}</span>
+                      </button>
+
+                      {/* Absent First Sort Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSortBy((prev) => (prev === 'absent_first' ? 'usn_asc' : 'absent_first'))}
+                        className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all border ${
+                          sortBy === 'absent_first'
+                            ? 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                        title="Show Absent Students First"
+                      >
+                        Absent First
+                      </button>
+
+                      {/* Present First Sort Button */}
+                      <button
+                        type="button"
+                        onClick={() => setSortBy((prev) => (prev === 'present_first' ? 'usn_asc' : 'present_first'))}
+                        className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition-all border ${
+                          sortBy === 'present_first'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }`}
+                        title="Show Present Students First"
+                      >
+                        Present First
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -597,17 +878,29 @@ const StartSessionPage = () => {
                 )}
               </div>
 
+              {/* Informational notice when 0 periods selected */}
+              {selectedSlotIds.length === 0 && (
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-xs text-amber-800 dark:text-amber-300 flex items-center space-x-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                  <span>
+                    <strong>Why is the button disabled?</strong> You must select at least one timetable period (e.g. 1st Period, 2nd Period) in the timetable grid above to enable attendance recording.
+                  </span>
+                </div>
+              )}
+
               {/* Final Submit Button */}
               <button
                 type="submit"
                 disabled={submittingPeriods || selectedSlotIds.length === 0 || roster.length === 0}
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all disabled:opacity-50 text-sm"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 disabled:text-slate-500 dark:disabled:text-slate-500 text-white rounded-2xl font-bold flex items-center justify-center space-x-2 shadow-lg shadow-indigo-600/30 disabled:shadow-none transition-all disabled:cursor-not-allowed text-sm"
               >
                 <CheckCircle2 className="w-5 h-5" />
                 <span>
                   {submittingPeriods
                     ? 'Recording Official Attendance...'
-                    : `Record Attendance for ${selectedSlotIds.length || 0} Period(s) (${presentCount} Present)`}
+                    : selectedSlotIds.length === 0
+                    ? 'Select at least 1 Period Above to Submit Attendance'
+                    : `Record Attendance for ${selectedSlotIds.length} Period(s) (${presentCount} Present)`}
                 </span>
               </button>
             </form>
@@ -654,9 +947,29 @@ const StartSessionPage = () => {
                   className="w-full px-3 py-2.5 border border-slate-300 dark:border-slate-700 rounded-xl text-sm bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white"
                 >
                   <option value="">On-Demand (Custom Duration)</option>
-                  {slots.map((s) => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)})</option>
-                  ))}
+                  {slots.map((s) => {
+                    const isPassed = isSlotPassed(s, selectedDate);
+                    const isOccupiedByOther = s.is_accessed && !s.is_my_session;
+                    const isCurrentActive = s.is_my_session && s.active_session_id;
+                    const isDisabled = isPassed || isOccupiedByOther || (s.is_disabled && !isCurrentActive);
+
+                    let statusTag = '';
+                    if (isOccupiedByOther) {
+                      statusTag = ` — In Use by ${s.accessed_by_teacher_name || 'Faculty'}`;
+                    } else if (isPassed) {
+                      statusTag = ' — Time Passed';
+                    } else if (isCurrentActive) {
+                      statusTag = ' — Active Session (You)';
+                    } else if (s.is_disabled) {
+                      statusTag = ` — ${s.disabled_reason || 'Unavailable'}`;
+                    }
+
+                    return (
+                      <option key={s.id} value={s.id} disabled={isDisabled}>
+                        {s.name} ({s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}){statusTag}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

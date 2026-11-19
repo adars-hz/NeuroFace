@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import {
   FileText, CheckCircle, XCircle, Clock, Eye, AlertCircle,
-  ExternalLink, Sparkles, Filter, CheckCircle2, UserCheck
+  ExternalLink, Sparkles, Filter, CheckCircle2, UserCheck, ShieldAlert
 } from 'lucide-react';
 
 const TeacherLeavesPage = () => {
+  const { user } = useAuth();
+  const isAuthorized = user?.is_hod || user?.is_class_advisor || user?.role === 'ADMIN';
+
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -53,20 +57,47 @@ const TeacherLeavesPage = () => {
     return l.status === statusFilter;
   });
 
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-2xl mx-auto my-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 text-center space-y-4">
+        <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-white font-heading">
+          Leave Review Authority Restricted
+        </h2>
+        <p className="text-sm text-slate-600 leading-relaxed max-w-md mx-auto">
+          Under institutional academic regulations, only the <strong>Head of Department (HOD)</strong> and designated <strong>Class Advisors</strong> are authorized to review and approve student leave letters and medical certificates.
+        </p>
+        <p className="text-xs text-slate-500">
+          Regular faculty members can view student attendance reports for their assigned courses under <strong>Student Reports</strong>.
+        </p>
+        <div className="pt-2">
+          <a
+            href="/teacher"
+            className="inline-flex items-center px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition"
+          >
+            Return to Faculty Dashboard
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-heading">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">
             Student Leave Applications & OCR Analysis
           </h1>
-          <p className="text-slate-600 text-sm">
+          <p className="text-slate-600 dark:text-slate-400 text-sm">
             Review leave requests, medical certificates, and automated OCR telemetry for your department and advised classes
           </p>
         </div>
 
         {/* Status Filters */}
-        <div className="flex items-center space-x-1 bg-white p-1 rounded-xl border border-slate-200 shadow-sm text-xs font-semibold overflow-x-auto max-w-full">
+        <div className="flex items-center space-x-1 bg-white dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-xs font-semibold overflow-x-auto max-w-full">
           <button
             onClick={() => setStatusFilter('ALL')}
             className={`px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap ${
@@ -115,7 +146,7 @@ const TeacherLeavesPage = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         {/* Desktop View Table */}
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-sm min-w-[700px]">
@@ -129,7 +160,7 @@ const TeacherLeavesPage = () => {
                 <th className="px-6 py-3.5 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filteredLeaves.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-8 text-center text-xs text-slate-400">
@@ -144,7 +175,7 @@ const TeacherLeavesPage = () => {
                   return (
                     <tr key={l.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900">{l.student_name}</div>
+                        <div className="font-semibold text-slate-900 dark:text-white">{l.student_name}</div>
                         <div className="font-mono text-xs text-slate-500">{l.register_number}</div>
                       </td>
                       <td className="px-6 py-4 text-xs font-medium text-slate-700">
@@ -159,10 +190,10 @@ const TeacherLeavesPage = () => {
                           <span>{l.subject_name || 'All Subjects'}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-600 font-medium whitespace-nowrap">
+                      <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">
                         {l.start_date} &rarr; {l.end_date}
                       </td>
-                      <td className="px-6 py-4 text-xs text-slate-600 max-w-xs">
+                      <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 max-w-xs">
                         <div className="truncate font-medium">{l.reason}</div>
                         {doc ? (
                           <div className="flex items-center space-x-1.5 mt-1 text-[11px] text-teal-700">
@@ -233,7 +264,7 @@ const TeacherLeavesPage = () => {
                 <div key={l.id} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="font-bold text-slate-900 text-sm">{l.student_name}</div>
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">{l.student_name}</div>
                       <div className="font-mono text-xs text-slate-500">{l.register_number}</div>
                     </div>
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
@@ -302,10 +333,10 @@ const TeacherLeavesPage = () => {
       {/* Review Modal */}
       {reviewModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 font-heading">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
                   Leave Application #{reviewModal.id}
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -321,7 +352,7 @@ const TeacherLeavesPage = () => {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="space-y-3 text-xs bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
               <div>
                 <span className="text-slate-500 font-semibold">Student:</span>{' '}
                 <span className="font-bold text-slate-800">
@@ -349,7 +380,7 @@ const TeacherLeavesPage = () => {
               </div>
               <div>
                 <span className="text-slate-500 font-semibold">Stated Reason:</span>{' '}
-                <p className="mt-1 text-slate-700 bg-white p-2.5 rounded-xl border">
+                <p className="mt-1 text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
                   {reviewModal.reason}
                 </p>
               </div>
@@ -358,7 +389,7 @@ const TeacherLeavesPage = () => {
             {/* Attached Documents & OCR Telemetry */}
             {reviewModal.documents && reviewModal.documents.length > 0 && (
               <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                <div className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
                   <span>Attached Document & OCR Telemetry</span>
                   <span className="text-[10px] text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full font-semibold">
                     {reviewModal.documents.length} File(s)
@@ -447,7 +478,7 @@ const TeacherLeavesPage = () => {
 
             <form onSubmit={handleReviewSubmit} className="space-y-4 text-sm">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   Review Decision
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -457,7 +488,7 @@ const TeacherLeavesPage = () => {
                     className={`py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center justify-center space-x-1.5 ${
                       reviewForm.status === 'APPROVED'
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -469,7 +500,7 @@ const TeacherLeavesPage = () => {
                     className={`py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center justify-center space-x-1.5 ${
                       reviewForm.status === 'REJECTED'
                         ? 'bg-rose-600 text-white border-rose-600 shadow'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                   >
                     <XCircle className="w-4 h-4" />
@@ -479,7 +510,7 @@ const TeacherLeavesPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Faculty Review Remarks
                 </label>
                 <textarea
@@ -487,7 +518,7 @@ const TeacherLeavesPage = () => {
                   value={reviewForm.remarks}
                   onChange={(e) => setReviewForm({ ...reviewForm, remarks: e.target.value })}
                   placeholder="e.g. Verified medical records and approved."
-                  className="w-full px-3 py-2 border rounded-xl text-xs"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -495,7 +526,7 @@ const TeacherLeavesPage = () => {
                 <button
                   type="button"
                   onClick={() => setReviewModal(null)}
-                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600"
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>

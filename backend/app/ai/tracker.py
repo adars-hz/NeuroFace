@@ -86,37 +86,69 @@ class MultiFrameConfirmationBuffer:
             s1, s2 = np.std(roi1), np.std(roi2)
             face_corr = float(np.corrcoef(roi1, roi2)[0, 1]) if s1 > 1e-3 and s2 > 1e-3 else 0.0
 
-            # Eye ROI check (y: 35 to 60, x: 25 to 88)
-            eye1 = g1[35:60, 25:88]
-            eye2 = g2_aligned[35:60, 25:88]
-            e1_flat, e2_flat = eye1.flatten(), eye2.flatten()
-            se1, se2 = np.std(e1_flat), np.std(e2_flat)
-            eye_corr = float(np.corrcoef(e1_flat, e2_flat)[0, 1]) if se1 > 1e-3 and se2 > 1e-3 else 0.0
-            eye_mae = float(np.mean(np.abs(eye1 - eye2)))
+            # 1. Rigid Skull / Forehead anchor ROI (y: 14 to 34, x: 28 to 84)
+            fh1 = g1[14:34, 28:84]
+            fh2 = g2_aligned[14:34, 28:84]
+            std_fh = np.std(fh1) + 1e-3
+            fh_norm_mae = float(np.mean(np.abs(fh1 - fh2))) / std_fh
 
-            # Natural liveness indicators:
-            # - Eye blink / wink: eye_corr < 0.92 or eye_mae >= 5.2
-            # - Natural facial micro-expression / breathing: face_corr < 0.965 or eye_corr < 0.935
-            has_eye_movement = (eye_corr < 0.92 or eye_mae >= 5.2)
-            has_micro_movement = (face_corr < 0.965 or eye_corr < 0.935)
-            is_live_movement = has_eye_movement or has_micro_movement
+            # 2. Eye/Eyelid ROI (y: 36 to 58, x: 22 to 90)
+            eye1 = g1[36:58, 22:90]
+            eye2 = g2_aligned[36:58, 22:90]
+            std_eye = np.std(eye1) + 1e-3
+            eye_norm_mae = float(np.mean(np.abs(eye1 - eye2))) / std_eye
+
+            # 3. Mouth/Lip ROI (y: 76 to 100, x: 30 to 82)
+            m1 = g1[76:100, 30:82]
+            m2 = g2_aligned[76:100, 30:82]
+            std_m = np.std(m1) + 1e-3
+            m_norm_mae = float(np.mean(np.abs(m1 - m2))) / std_m
+
+            # Biological Liveness Discrimination:
+            # - In a phone screen or static photo: the whole 2D plane moves rigidly with hand tremor.
+            #   Normalized local motions are almost equal across all regions (ratio ~ 0.7 - 1.15).
+            # - In a real living human:
+            #   Eye blink: eyelid covers the eye, causing massive local eye MAE (ratio >= 1.60, eye_norm_mae >= 0.70)
+            #   while the forehead/skull bone structure remains stable!
+            eye_relative_motion = eye_norm_mae / (fh_norm_mae + 1e-4)
+            is_eye_blink = (eye_relative_motion >= 1.60 and eye_norm_mae >= 0.65) or (eye_norm_mae >= 1.40)
+            is_mouth_movement = (m_norm_mae / (fh_norm_mae + 1e-4) >= 1.80 and m_norm_mae >= 0.75)
+
+            is_biological_liveness = is_eye_blink or is_mouth_movement
+
+            # Also check across earlier sample in buffer (e.g. frame 0 vs frame 2)
+            if not is_biological_liveness and len(samples) >= 3:
+                c0 = samples[-3].aligned_crop
+                if c0 is not None and c0.shape == (112, 112, 3):
+                    g0 = cv2.cvtColor(c0, cv2.COLOR_BGR2GRAY).astype(np.float32)
+                    (sx0, sy0), _ = cv2.phaseCorrelate(g0, g2)
+                    M0 = np.float32([[1, 0, -sx0], [0, 1, -sy0]])
+                    g2_al0 = cv2.warpAffine(g2, M0, (w, h))
+
+                    fh0 = g0[14:34, 28:84]
+                    eye0 = g0[36:58, 22:90]
+                    fh0_norm = float(np.mean(np.abs(fh0 - g2_al0[14:34, 28:84]))) / (np.std(fh0) + 1e-3)
+                    eye0_norm = float(np.mean(np.abs(eye0 - g2_al0[36:58, 22:90]))) / (np.std(eye0) + 1e-3)
+                    if (eye0_norm / (fh0_norm + 1e-4) >= 1.60 and eye0_norm >= 0.65) or (eye0_norm >= 1.40):
+                        is_biological_liveness = True
 
             # If biological movement is confirmed, mark as live verified!
-            if is_live_movement:
+            if is_biological_liveness:
                 return True, True, "Live human verified"
 
-            # Motionless state (could be a still human or static photo / phone screen)
+            # Motionless state or Rigid 2D movement (static photo / phone screen moved by hand)
             if num_hits == 2:
-                # Live student holding very still: prompt naturally
+                # Live student holding very still or phone held in hand: prompt naturally
                 return False, True, "Verifying (2/3) - please blink or nod"
             elif num_hits == 3:
-                # Still holding motionless: prompt again
+                # Still holding motionless / rigid: prompt again
                 return False, True, "Verifying (3/3) - please blink to confirm"
             else:
-                # Persistently motionless across 4 consecutive frames (over 3.6s with zero movement)
+                # Persistently rigid across 4 consecutive frames (over 4.5s with zero biological blink)
+                # Static photo / phone screen presentation attack!
                 self.clear_student(session_id, student_id)
-                self._spoof_cooldowns[session_id][student_id] = now + 3.0
-                return False, False, f"Static photo / phone screen detected (corr={face_corr:.3f}, eye={eye_corr:.3f})"
+                self._spoof_cooldowns[session_id][student_id] = now + 4.0
+                return False, False, f"Static phone screen / photo detected (no biological blink, rigid motion ratio={eye_relative_motion:.2f})"
 
         # Fallback if crops are unavailable
         return True, True, "Live human verified"

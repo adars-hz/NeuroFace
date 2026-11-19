@@ -32,55 +32,55 @@ const HODOversightPage = () => {
           <div className="inline-flex items-center text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 mb-1">
             <Award className="w-3.5 h-3.5 mr-1" /> HOD Administrative Authority
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 font-heading">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">
             Department Oversight & Analytics: {overview?.department_name}
           </h1>
-          <p className="text-slate-600 text-sm">Comprehensive cross-class attendance trends and faculty lecture monitoring</p>
+          <p className="text-slate-600 dark:text-slate-400 text-sm">Comprehensive cross-class attendance trends and faculty lecture monitoring</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Department Classes</div>
-          <div className="text-2xl font-extrabold text-slate-900 font-heading mt-2">{overview?.total_classes}</div>
+          <div className="text-2xl font-extrabold text-slate-900 dark:text-white font-heading mt-2">{overview?.total_classes}</div>
           <div className="text-xs text-slate-500 mt-1">Active semester batches</div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Department Faculty</div>
           <div className="text-2xl font-extrabold text-teal-700 font-heading mt-2">{overview?.total_teachers}</div>
           <div className="text-xs text-slate-500 mt-1">Teaching staff members</div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Enrolled Students</div>
           <div className="text-2xl font-extrabold text-blue-600 font-heading mt-2">{overview?.total_students}</div>
           <div className="text-xs text-slate-500 mt-1">Across all MCA semesters</div>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="text-xs font-bold text-amber-600 uppercase tracking-wider">Pending Leaves</div>
           <div className="text-2xl font-extrabold text-amber-600 font-heading mt-2">{overview?.pending_leave_applications}</div>
           <div className="text-xs text-slate-500 mt-1">Awaiting verification</div>
         </div>
       </div>
 
-      <div className="p-6 bg-neutral-100 rounded-2xl border border-neutral-300 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 bg-slate-100 dark:bg-slate-800 rounded-2xl border border-slate-300 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h3 className="font-bold text-black font-heading text-sm">Student Face Re-Registration Authorizations</h3>
-          <p className="text-xs text-neutral-600 mt-0.5">
+          <h3 className="font-bold text-slate-900 dark:text-white font-heading text-sm">Student Face Re-Registration Authorizations</h3>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
             Students whose facial biometrics are already enrolled require HOD or Admin approval to re-register their template.
           </p>
         </div>
         <Link
           to="/admin/approvals?tab=face"
-          className="px-4 py-2 bg-black text-white rounded-xl text-xs font-bold hover:bg-neutral-800 transition-colors shadow whitespace-nowrap text-center"
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-colors shadow whitespace-nowrap text-center"
         >
           Review Face Requests &rarr;
         </Link>
       </div>
 
-      <div className="p-6 bg-amber-50/60 rounded-2xl border border-amber-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-6 bg-amber-50/60 dark:bg-amber-950/40 rounded-2xl border border-amber-200/80 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h3 className="font-bold text-amber-900 font-heading text-sm">Need to grant medical attendance waivers?</h3>
           <p className="text-xs text-amber-800 mt-0.5">

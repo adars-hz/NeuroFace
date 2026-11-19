@@ -68,6 +68,8 @@ def mark_missing_students_absent(db: Session, session: AttendanceSession, marked
 def auto_expire_stale_sessions(db: Session) -> None:
     """Close sessions whose end time has passed and mark absent students."""
     now_utc = datetime.now(timezone.utc)
+    now_time = datetime.now().time()
+    today = date.today()
 
     active_sessions = db.query(AttendanceSession).filter(
         AttendanceSession.status == AttendanceSessionStatus.ACTIVE
@@ -75,8 +77,16 @@ def auto_expire_stale_sessions(db: Session) -> None:
 
     changed = False
     for session in active_sessions:
+        should_expire = False
         end_time = as_utc(session.end_time)
         if end_time is not None and end_time < now_utc:
+            should_expire = True
+        elif session.slot and session.session_date == today and now_time > session.slot.end_time:
+            should_expire = True
+        elif session.session_date < today:
+            should_expire = True
+
+        if should_expire:
             session.status = AttendanceSessionStatus.EXPIRED
             mark_missing_students_absent(db, session, "Auto Expire")
             changed = True
@@ -111,7 +121,35 @@ def start_attendance_session(
             detail="Unauthorized: You are not assigned to this subject and class."
         )
 
-    # 2. A class can only have one live session at a time.
+    # 2. If a timetable slot is selected, validate time eligibility and exclusivity
+    slot = None
+    if req.slot_id:
+        slot = db.query(AttendanceSlot).filter(AttendanceSlot.id == req.slot_id).first()
+        if not slot:
+            raise HTTPException(status_code=404, detail="Selected timetable slot not found.")
+
+        # Check: Time passed
+        now_time = datetime.now().time()
+        if now_time > slot.end_time:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot start session: The scheduled time for '{slot.name}' has already passed (ended at {slot.end_time.strftime('%I:%M %p')})."
+            )
+
+        # Check: Exclusivity - if any other faculty has started/accessed this slot today
+        other_session = db.query(AttendanceSession).filter(
+            AttendanceSession.slot_id == req.slot_id,
+            AttendanceSession.session_date == date.today(),
+            AttendanceSession.teacher_id != teacher.id
+        ).first()
+        if other_session:
+            other_name = other_session.teacher.full_name if other_session.teacher else "another faculty member"
+            raise HTTPException(
+                status_code=403,
+                detail=f"Slot '{slot.name}' has already been accessed by {other_name} and cannot be accessed by another faculty member."
+            )
+
+    # 3. A class can only have one live session at a time.
     overlap = db.query(AttendanceSession)\
         .join(TeacherSubjectClassAssignment, AttendanceSession.assignment_id == TeacherSubjectClassAssignment.id)\
         .filter(
@@ -119,6 +157,32 @@ def start_attendance_session(
             AttendanceSession.status == AttendanceSessionStatus.ACTIVE
         ).first()
     if overlap:
+        # If the active session is for the same teacher and slot, return it
+        if overlap.teacher_id == teacher.id:
+            total_enrolled = db.query(Student).filter(Student.class_id == assignment.class_id).count()
+            present_count = db.query(AttendanceRecord).filter(
+                AttendanceRecord.session_id == overlap.id,
+                AttendanceRecord.status == AttendanceStatus.PRESENT
+            ).count()
+            return SessionOut(
+                id=overlap.id,
+                assignment_id=overlap.assignment_id,
+                teacher_id=overlap.teacher_id,
+                teacher_name=teacher.full_name,
+                subject_id=assignment.subject_id,
+                subject_name=assignment.subject.name,
+                subject_code=assignment.subject.code,
+                class_id=assignment.class_id,
+                class_name=assignment.class_assigned.name,
+                slot_id=overlap.slot_id,
+                slot_name=overlap.slot.name if overlap.slot else "On-Demand Session",
+                session_date=overlap.session_date,
+                start_time=overlap.start_time,
+                end_time=overlap.end_time,
+                status=overlap.status,
+                total_enrolled=total_enrolled,
+                present_count=present_count
+            )
         raise HTTPException(
             status_code=400,
             detail={
@@ -127,15 +191,18 @@ def start_attendance_session(
             }
         )
 
-    # 3. Create the session.
+    # 4. Create the session.
     start_time = datetime.now(timezone.utc)
-
-    # Prevent starting a session in the future relative to current time.
-    # Since we use date.today() and current time, this is generally safe,
-    # but we ensure the session date isn't in the future.
     session_date = date.today()
-    if session_date > date.today():
-        raise HTTPException(status_code=400, detail="Cannot start a session for a future date.")
+
+    # Determine end time: if slot is provided, cap at slot's scheduled end time
+    if slot and slot.end_time:
+        slot_end_local = datetime.combine(session_date, slot.end_time)
+        now_local = datetime.now()
+        rem_sec = max(60, int((slot_end_local - now_local).total_seconds()))
+        end_time = start_time + timedelta(seconds=rem_sec)
+    else:
+        end_time = start_time + timedelta(minutes=req.duration_minutes)
 
     session = AttendanceSession(
         assignment_id=assignment.id,
@@ -143,7 +210,7 @@ def start_attendance_session(
         slot_id=req.slot_id,
         session_date=session_date,
         start_time=start_time,
-        end_time=start_time + timedelta(minutes=req.duration_minutes),
+        end_time=end_time,
         status=AttendanceSessionStatus.ACTIVE
     )
     db.add(session)
@@ -196,6 +263,13 @@ def get_live_session_stats(
     session = db.query(AttendanceSession).filter(AttendanceSession.id == id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
+
+    teacher = current_teacher_user.teacher_profile
+    if session.teacher_id != teacher.id and not teacher.is_hod and current_teacher_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized: Only the faculty member who started this session can access its live feed."
+        )
 
     now = datetime.now(timezone.utc)
     session_end = as_utc(session.end_time)
@@ -252,6 +326,14 @@ def process_camera_frame(
     session = db.query(AttendanceSession).filter(AttendanceSession.id == id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Attendance session not found")
+
+    teacher = current_teacher_user.teacher_profile
+    if session.teacher_id != teacher.id and not teacher.is_hod and current_teacher_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized: Only the faculty member who started this session can process camera frames."
+        )
+
     if session.status != AttendanceSessionStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="This attendance session is no longer active.")
 
@@ -513,6 +595,13 @@ def complete_attendance_session(
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    teacher = current_teacher_user.teacher_profile
+    if session.teacher_id != teacher.id and not teacher.is_hod and current_teacher_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=403,
+            detail="Unauthorized: Only the faculty member who started this session can complete it."
+        )
+
     session.status = AttendanceSessionStatus.COMPLETED
     session.end_time = datetime.now(timezone.utc)
 
@@ -541,6 +630,7 @@ def get_roster_baseline(
     assignment_id: int,
     session_date: Optional[date] = None,
     clone_session_id: Optional[int] = None,
+    target_slot_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_teacher_user: User = Depends(get_current_teacher)
 ):
@@ -548,8 +638,8 @@ def get_roster_baseline(
     Get student roster for a class with smart baseline:
     - Pre-populates all enrolled students
     - Checks approved leaves for the given date (defaults to today)
-    - If clone_session_id is provided, inherits the exact attendance status from that prior session
-    - Returns prior sessions of today for this class so teacher can easily clone
+    - If clone_session_id is provided, inherits attendance status strictly from the immediately previous slot
+    - Returns prior session of the immediately preceding timetable slot for this class
     """
     teacher = current_teacher_user.teacher_profile
     assignment = db.query(TeacherSubjectClassAssignment).filter(
@@ -559,8 +649,9 @@ def get_roster_baseline(
     if not assignment:
         raise HTTPException(status_code=404, detail="Course assignment not found.")
 
-    if assignment.teacher_id != teacher.id and not teacher.is_hod and current_teacher_user.role != "ADMIN":
-        raise HTTPException(status_code=403, detail="Unauthorized: You are not assigned to this course.")
+    if current_teacher_user.role != "ADMIN":
+        if not teacher or (assignment.teacher_id != teacher.id and not teacher.is_hod):
+            raise HTTPException(status_code=403, detail="Unauthorized: You are not assigned to this course.")
 
     target_date = session_date or date.today()
 
@@ -578,16 +669,70 @@ def get_roster_baseline(
         if leave.subject_id is None or leave.subject_id == assignment.subject_id:
             leave_map[leave.student_id] = leave.reason
 
-    # 3. If clone_session_id is provided, fetch existing records from that session
+    # 3. Determine the immediately previous timetable slot and find its recorded session
+    all_slots = db.query(AttendanceSlot).order_by(AttendanceSlot.start_time.asc()).all()
+    slot_id_list = [s.id for s in all_slots]
+
+    prior_summaries = []
+    eligible_previous_session = None
+    previous_slot_name = None
+    has_previous_slot = False
+
+    if target_slot_id and target_slot_id in slot_id_list:
+        target_idx = slot_id_list.index(target_slot_id)
+        if target_idx > 0:
+            has_previous_slot = True
+            previous_slot = all_slots[target_idx - 1]
+            previous_slot_name = previous_slot.name
+
+            # Query the session for this class and date in the immediately previous slot
+            prev_sess = db.query(AttendanceSession).join(
+                TeacherSubjectClassAssignment,
+                AttendanceSession.assignment_id == TeacherSubjectClassAssignment.id
+            ).filter(
+                TeacherSubjectClassAssignment.class_id == assignment.class_id,
+                AttendanceSession.slot_id == previous_slot.id,
+                AttendanceSession.session_date == target_date
+            ).order_by(AttendanceSession.id.desc()).first()
+
+            if prev_sess:
+                eligible_previous_session = prev_sess
+                p_count = db.query(AttendanceRecord).filter(
+                    AttendanceRecord.session_id == prev_sess.id,
+                    AttendanceRecord.status == AttendanceStatus.PRESENT
+                ).count()
+                a_count = db.query(AttendanceRecord).filter(
+                    AttendanceRecord.session_id == prev_sess.id,
+                    AttendanceRecord.status == AttendanceStatus.ABSENT
+                ).count()
+                prior_summaries.append(PriorSessionSummary(
+                    id=prev_sess.id,
+                    slot_id=prev_sess.slot_id,
+                    slot_name=prev_sess.slot.name if prev_sess.slot else previous_slot.name,
+                    subject_name=prev_sess.assignment.subject.name if prev_sess.assignment and prev_sess.assignment.subject else "Class Session",
+                    start_time=prev_sess.start_time,
+                    present_count=p_count,
+                    absent_count=a_count
+                ))
+        else:
+            has_previous_slot = False
+            previous_slot_name = None
+
+    # 4. If clone_session_id is provided, enforce that it must be from the immediately previous slot
     cloned_status_map = {}
     if clone_session_id:
+        if not eligible_previous_session or clone_session_id != eligible_previous_session.id:
+            raise HTTPException(
+                status_code=400,
+                detail="Cloning policy violation: Attendance can only be cloned from the immediately previous timetable slot."
+            )
         clone_records = db.query(AttendanceRecord).filter(
             AttendanceRecord.session_id == clone_session_id
         ).all()
         for r in clone_records:
             cloned_status_map[r.student_id] = r.status
 
-    # 4. Build roster items
+    # 5. Build roster items
     roster = []
     for s in students:
         is_on_leave = s.id in leave_map
@@ -610,42 +755,15 @@ def get_roster_baseline(
             leave_reason=leave_reason
         ))
 
-    # 5. Fetch prior sessions completed on target_date for this class
-    prior_sessions = db.query(AttendanceSession).join(
-        TeacherSubjectClassAssignment,
-        AttendanceSession.assignment_id == TeacherSubjectClassAssignment.id
-    ).filter(
-        TeacherSubjectClassAssignment.class_id == assignment.class_id,
-        AttendanceSession.session_date == target_date
-    ).order_by(AttendanceSession.start_time.asc()).all()
-
-    prior_summaries = []
-    for ps in prior_sessions:
-        p_count = db.query(AttendanceRecord).filter(
-            AttendanceRecord.session_id == ps.id,
-            AttendanceRecord.status == AttendanceStatus.PRESENT
-        ).count()
-        a_count = db.query(AttendanceRecord).filter(
-            AttendanceRecord.session_id == ps.id,
-            AttendanceRecord.status == AttendanceStatus.ABSENT
-        ).count()
-        prior_summaries.append(PriorSessionSummary(
-            id=ps.id,
-            slot_id=ps.slot_id,
-            slot_name=ps.slot.name if ps.slot else "On-Demand",
-            subject_name=ps.assignment.subject.name if ps.assignment and ps.assignment.subject else "Class Session",
-            start_time=ps.start_time,
-            present_count=p_count,
-            absent_count=a_count
-        ))
-
     return RosterBaselineResponse(
         assignment_id=assignment.id,
         subject_name=assignment.subject.name,
         class_name=assignment.class_assigned.name,
         date=target_date,
         students=roster,
-        prior_sessions_today=prior_summaries
+        prior_sessions_today=prior_summaries,
+        previous_slot_name=previous_slot_name,
+        has_previous_slot=has_previous_slot
     )
 
 
@@ -683,12 +801,40 @@ def submit_consecutive_periods_attendance(
 
     created_session_ids = []
     now = datetime.now(timezone.utc)
+    now_time = datetime.now().time()
 
     present_cnt = sum(1 for r in req.records if r.status == AttendanceStatus.PRESENT)
     absent_cnt = sum(1 for r in req.records if r.status == AttendanceStatus.ABSENT)
 
     for slot_id in req.slot_ids:
         slot = slot_map.get(slot_id)
+        if not slot:
+            continue
+
+        # 1. Check if time has passed
+        if target_date < date.today():
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot record attendance: Timetable period '{slot.name}' for past date {target_date} has expired."
+            )
+        if target_date == date.today() and now_time > slot.end_time:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot record attendance: The scheduled time for '{slot.name}' has already passed (ended at {slot.end_time.strftime('%I:%M %p')})."
+            )
+
+        # 2. Check exclusivity: if any other faculty has started/accessed this slot on target_date
+        other_session = db.query(AttendanceSession).filter(
+            AttendanceSession.slot_id == slot_id,
+            AttendanceSession.session_date == target_date,
+            AttendanceSession.teacher_id != teacher.id
+        ).first()
+        if other_session:
+            other_name = other_session.teacher.full_name if other_session.teacher else "another faculty member"
+            raise HTTPException(
+                status_code=403,
+                detail=f"Slot '{slot.name}' has already been accessed by {other_name} and cannot be accessed by another faculty member."
+            )
 
         # Determine start/end times based on slot or current time
         if slot and slot.start_time and slot.end_time:

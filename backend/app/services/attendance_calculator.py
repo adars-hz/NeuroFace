@@ -123,8 +123,12 @@ def calculate_student_subject_attendance(
         fine_status=fine_status
     )
 
-def calculate_student_full_report(db: Session, student_id: int) -> StudentAttendanceReport:
-    """Calculate attendance report across all subjects assigned to the student's class."""
+def calculate_student_full_report(
+    db: Session,
+    student_id: int,
+    filter_subject_ids: Optional[List[int]] = None
+) -> StudentAttendanceReport:
+    """Calculate attendance report across subjects (optionally filtered by subject IDs)."""
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         raise ValueError("Student not found")
@@ -132,11 +136,15 @@ def calculate_student_full_report(db: Session, student_id: int) -> StudentAttend
     fine_rule = get_active_fine_rule(db)
 
     # Find subjects assigned to the student's class
-    subjects = db.query(Subject)\
+    subjects_query = db.query(Subject)\
         .join(TeacherSubjectClassAssignment, Subject.id == TeacherSubjectClassAssignment.subject_id)\
         .filter(TeacherSubjectClassAssignment.class_id == student.class_id)\
-        .distinct()\
-        .all()
+        .distinct()
+
+    if filter_subject_ids is not None:
+        subjects_query = subjects_query.filter(Subject.id.in_(filter_subject_ids))
+
+    subjects = subjects_query.all()
 
     subject_stats: List[SubjectAttendanceStat] = []
     total_effective_pct = 0.0

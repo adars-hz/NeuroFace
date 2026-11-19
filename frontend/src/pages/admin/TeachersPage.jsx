@@ -159,12 +159,12 @@ const TeachersPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 font-heading">Teachers & HOD Management</h1>
-          <p className="text-slate-600 text-sm">Designate department heads and manage faculty credentials</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">Teachers & HOD Management</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm">Designate department heads and manage faculty credentials</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-black hover:bg-neutral-800 text-white text-sm font-semibold shadow transition-colors"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white shadow-teal-600/20 text-sm font-semibold shadow transition-colors"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           Add Faculty Member
@@ -190,10 +190,10 @@ const TeachersPage = () => {
       )}
 
       {/* Teachers Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-slate-700 min-w-[700px]">
-          <thead className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider">
+          <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
             <tr>
               <th className="px-6 py-3.5">Faculty Member</th>
               <th className="px-6 py-3.5">Faculty Code</th>
@@ -203,31 +203,31 @@ const TeachersPage = () => {
               <th className="px-6 py-3.5 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
             {teachers.map((t) => (
-              <tr key={t.id} className="hover:bg-slate-50/80 transition-colors">
+              <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                 <td className="px-6 py-4">
-                  <div className="font-semibold text-slate-900">{t.full_name}</div>
-                  <div className="text-xs text-slate-600 flex items-center space-x-2 mt-0.5">
+                  <div className="font-semibold text-slate-900 dark:text-white">{t.full_name}</div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center space-x-2 mt-0.5">
                     <Mail className="w-3 h-3 text-slate-400" />
                     <span>{t.email}</span>
                   </div>
                 </td>
-                <td className="px-6 py-4 font-mono text-xs font-semibold text-slate-600">
+                <td className="px-6 py-4 font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">
                   {t.teacher_code}
                 </td>
-                <td className="px-6 py-4 text-xs font-medium text-slate-600">
+                <td className="px-6 py-4 text-xs font-medium text-slate-600 dark:text-slate-400">
                   {t.department_name || 'Unassigned'}
                 </td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                     {t.designation.replace('_', ' ')}
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex flex-col gap-1 items-start">
                     {t.is_hod ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                         <Award className="w-3.5 h-3.5 mr-1 text-amber-600" />
                         Head of Dept (HOD)
                       </span>
@@ -235,7 +235,7 @@ const TeachersPage = () => {
                       <span className="text-xs text-slate-600 font-medium">Faculty</span>
                     )}
                     {t.is_class_advisor && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 text-teal-800 border border-teal-200" title={t.advised_classes?.join(', ')}>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800" title={t.advised_classes?.join(', ')}>
                         <Award className="w-3 h-3 mr-1 text-teal-600" />
                         Advisor: {t.advised_classes?.[0]}
                       </span>
@@ -248,8 +248,8 @@ const TeachersPage = () => {
                       onClick={() => handleToggleHOD(t.id, t.is_hod)}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                         t.is_hod
-                          ? 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+                          : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700'
                       }`}
                       title={t.is_hod ? 'Demote from HOD' : 'Designate as HOD'}
                     >
@@ -257,14 +257,14 @@ const TeachersPage = () => {
                     </button>
                     <button
                       onClick={() => openEditModal(t)}
-                      className="p-1.5 rounded-lg text-slate-600 hover:text-teal-700 hover:bg-teal-50 border border-slate-200 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-teal-700 dark:hover:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-950/50 border border-slate-200 dark:border-slate-700 transition-colors"
                       title="Edit Faculty Details"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => setDeleteTarget(t)}
-                      className="p-1.5 rounded-lg text-slate-600 hover:text-rose-700 hover:bg-rose-50 border border-slate-200 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-600 dark:text-slate-400 hover:text-rose-700 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 border border-slate-200 dark:border-slate-700 transition-colors"
                       title="Delete Faculty Member"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -281,9 +281,9 @@ const TeachersPage = () => {
       {/* Modal to Add Teacher */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900 font-heading">Register Faculty Member</h3>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl space-y-4 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">Register Faculty Member</h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
@@ -292,59 +292,59 @@ const TeachersPage = () => {
             <form onSubmit={handleCreate} className="space-y-4 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Full Name</label>
                   <input
                     type="text"
                     required
                     value={formData.full_name}
                     onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Teacher Code</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Teacher Code</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. T004"
                     value={formData.teacher_code}
                     onChange={(e) => setFormData({ ...formData, teacher_code: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl font-mono"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-mono focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Username</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Username</label>
                   <input
                     type="text"
                     required
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Email</label>
                   <input
                     type="email"
                     required
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Department</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Department</label>
                   <select
                     required
                     value={formData.department_id}
                     onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="">Select Department</option>
                     {departments.map((d) => (
@@ -353,11 +353,11 @@ const TeachersPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Designation</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Designation</label>
                   <select
                     value={formData.designation}
                     onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
                     <option value="ASSOCIATE_PROFESSOR">Associate Professor</option>
@@ -368,13 +368,13 @@ const TeachersPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Password</label>
                 <input
                   type="password"
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-xl"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
@@ -401,10 +401,10 @@ const TeachersPage = () => {
       {/* Modal to Edit Teacher */}
       {editTeacher && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-4 sm:p-6 shadow-xl space-y-4 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 font-heading">Edit Faculty Details</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">Edit Faculty Details</h3>
                 <p className="text-xs text-slate-500">Teacher Code: <span className="font-mono font-bold text-slate-700">{editTeacher.teacher_code}</span></p>
               </div>
               <button onClick={() => setEditTeacher(null)} className="text-slate-400 hover:text-slate-600">
@@ -415,34 +415,34 @@ const TeachersPage = () => {
             <form onSubmit={handleUpdate} className="space-y-4 text-sm">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Full Name</label>
                   <input
                     type="text"
                     required
                     value={editFormData.full_name}
                     onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Email</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Email</label>
                   <input
                     type="email"
                     required
                     value={editFormData.email}
                     onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Department</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Department</label>
                   <select
                     value={editFormData.department_id}
                     onChange={(e) => setEditFormData({ ...editFormData, department_id: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="">No Department</option>
                     {departments.map((d) => (
@@ -451,11 +451,11 @@ const TeachersPage = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Designation</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Designation</label>
                   <select
                     value={editFormData.designation}
                     onChange={(e) => setEditFormData({ ...editFormData, designation: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   >
                     <option value="ASSISTANT_PROFESSOR">Assistant Professor</option>
                     <option value="ASSOCIATE_PROFESSOR">Associate Professor</option>
@@ -467,23 +467,23 @@ const TeachersPage = () => {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Phone Number</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Phone Number</label>
                   <input
                     type="text"
                     placeholder="e.g. +91 98470 12345"
                     value={editFormData.phone}
                     onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Reset Password (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Reset Password (Optional)</label>
                   <input
                     type="password"
                     placeholder="Leave blank to keep current"
                     value={editFormData.password}
                     onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
               </div>
@@ -524,7 +524,7 @@ const TeachersPage = () => {
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-xl space-y-4 border border-rose-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-xl space-y-4 border border-rose-200 dark:border-rose-900/60 max-h-[90vh] overflow-y-auto text-slate-900 dark:text-white">
             <div className="flex items-start space-x-3">
               <div className="p-2.5 rounded-xl bg-rose-100 text-rose-600 flex-shrink-0">
                 <AlertTriangle className="w-5 h-5" />

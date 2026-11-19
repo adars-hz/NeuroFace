@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime, timezone, date
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.database.session import get_db
@@ -46,20 +47,124 @@ def get_my_assignments(
 
 @router.get("/available-slots", response_model=List[SlotOut])
 def get_available_slots(
+    assignment_id: Optional[int] = None,
+    session_date: Optional[date] = None,
     db: Session = Depends(get_db),
     current_teacher_user: User = Depends(get_current_teacher)
 ):
-    """List available attendance slots."""
-    slots = db.query(AttendanceSlot).all()
-    return [
-        SlotOut(
-            id=s.id,
-            name=s.name,
-            start_time=s.start_time.strftime("%H:%M:%S"),
-            end_time=s.end_time.strftime("%H:%M:%S"),
-            day_of_week=s.day_of_week
-        ) for s in slots
-    ]
+    """
+    List timetable lecture slots with runtime availability status:
+    - Disabled if the slot's scheduled time has passed for the given date.
+    - Disabled for other faculty if any faculty has already accessed/started the slot.
+    - Disabled after the end of the slot's time.
+    """
+    from app.api.v1.attendance import auto_expire_stale_sessions
+    auto_expire_stale_sessions(db)
+
+    teacher = current_teacher_user.teacher_profile
+    target_date = session_date or date.today()
+    today = date.today()
+    now_time = datetime.now().time()
+
+    slots = db.query(AttendanceSlot).order_by(AttendanceSlot.start_time.asc()).all()
+
+    # Query all sessions for this target date that have a slot assigned
+    sessions_for_date = db.query(AttendanceSession).filter(
+        AttendanceSession.session_date == target_date,
+        AttendanceSession.slot_id.isnot(None)
+    ).all()
+
+    slot_sessions_map = {}
+    for sess in sessions_for_date:
+        if sess.slot_id not in slot_sessions_map:
+            slot_sessions_map[sess.slot_id] = []
+        slot_sessions_map[sess.slot_id].append(sess)
+
+    results = []
+    for s in slots:
+        is_passed = False
+        is_disabled = False
+        disabled_reason = None
+        is_active_now = False
+
+        # 1. Time-passed check: disable when scheduled time is passed
+        if target_date < today:
+            is_passed = True
+            is_disabled = True
+            disabled_reason = "Scheduled period has passed (Past date)"
+        elif target_date == today:
+            if now_time > s.end_time:
+                is_passed = True
+                is_disabled = True
+                disabled_reason = f"Period ended at {s.end_time.strftime('%I:%M %p')}"
+            elif s.start_time <= now_time <= s.end_time:
+                is_active_now = True
+        else:
+            is_disabled = True
+            disabled_reason = "Cannot record attendance for future date"
+
+        # 2. Concurrency/Exclusivity check: if any faculty accessed this slot
+        sess_list = slot_sessions_map.get(s.id, [])
+        is_accessed = len(sess_list) > 0
+        accessed_by_teacher_id = None
+        accessed_by_teacher_name = None
+        is_my_session = False
+        active_session_id = None
+        session_status = None
+
+        if sess_list:
+            other_sess = next((ss for ss in sess_list if ss.teacher_id != teacher.id), None)
+            my_sess = next((ss for ss in sess_list if ss.teacher_id == teacher.id), None)
+
+            if other_sess:
+                # Started or completed by another faculty member -> disabled for all other faculty!
+                accessed_by_teacher_id = other_sess.teacher_id
+                accessed_by_teacher_name = other_sess.teacher.full_name if other_sess.teacher else "Another Faculty"
+                session_status = other_sess.status.value
+                is_my_session = False
+                is_disabled = True
+                status_desc = "In progress" if other_sess.status == AttendanceSessionStatus.ACTIVE else "Completed"
+                disabled_reason = f"Accessed by {accessed_by_teacher_name} ({status_desc})"
+            elif my_sess:
+                # Accessed by current faculty member
+                accessed_by_teacher_id = my_sess.teacher_id
+                accessed_by_teacher_name = my_sess.teacher.full_name if my_sess.teacher else teacher.full_name
+                session_status = my_sess.status.value
+                is_my_session = True
+                if my_sess.status == AttendanceSessionStatus.ACTIVE:
+                    active_session_id = my_sess.id
+                    if is_passed:
+                        # Time passed -> disabled even for the owner
+                        is_disabled = True
+                        disabled_reason = f"Period ended at {s.end_time.strftime('%I:%M %p')}"
+                    else:
+                        # Faculty member who started it can still access it during slot time!
+                        is_disabled = False
+                        disabled_reason = None
+                else:
+                    is_disabled = True
+                    disabled_reason = "Attendance already recorded for this period"
+
+        results.append(
+            SlotOut(
+                id=s.id,
+                name=s.name,
+                start_time=s.start_time.strftime("%H:%M:%S"),
+                end_time=s.end_time.strftime("%H:%M:%S"),
+                day_of_week=s.day_of_week,
+                is_disabled=is_disabled,
+                disabled_reason=disabled_reason,
+                is_passed=is_passed,
+                is_active_now=is_active_now,
+                is_accessed=is_accessed,
+                accessed_by_teacher_id=accessed_by_teacher_id,
+                accessed_by_teacher_name=accessed_by_teacher_name,
+                is_my_session=is_my_session,
+                active_session_id=active_session_id,
+                session_status=session_status
+            )
+        )
+    return results
 
 @router.get("/my-sessions", response_model=List[SessionOut])
 def get_my_sessions(
@@ -117,7 +222,11 @@ def get_session_records(
     if session.teacher_id != teacher.id and not teacher.is_hod:
         raise HTTPException(status_code=403, detail="Unauthorized to view this session")
 
-    records = db.query(AttendanceRecord).filter(AttendanceRecord.session_id == session_id).all()
+    records = db.query(AttendanceRecord).join(
+        Student, AttendanceRecord.student_id == Student.id
+    ).filter(
+        AttendanceRecord.session_id == session_id
+    ).order_by(Student.register_number.asc()).all()
     return [
         AttendanceRecordOut(
             id=r.id,

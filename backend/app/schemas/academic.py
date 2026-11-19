@@ -9,6 +9,10 @@ class DepartmentBase(BaseModel):
 class DepartmentCreate(DepartmentBase):
     pass
 
+class DepartmentUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+
 class DepartmentOut(DepartmentBase):
     id: int
 
@@ -23,6 +27,13 @@ class ClassBase(BaseModel):
 
 class ClassCreate(ClassBase):
     pass
+
+class ClassUpdate(BaseModel):
+    name: Optional[str] = None
+    department_id: Optional[int] = None
+    semester: Optional[int] = None
+    academic_year: Optional[str] = None
+    class_advisor_id: Optional[int] = None
 
 class ClassOut(ClassBase):
     id: int
@@ -47,6 +58,13 @@ class SubjectBase(BaseModel):
 
 class SubjectCreate(SubjectBase):
     pass
+
+class SubjectUpdate(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    department_id: Optional[int] = None
+    semester: Optional[int] = None
+    total_credits: Optional[int] = None
 
 class SubjectOut(SubjectBase):
     id: int
@@ -80,12 +98,29 @@ class SlotCreate(BaseModel):
     end_time: str
     day_of_week: Optional[str] = None
 
+class SlotUpdate(BaseModel):
+    name: Optional[str] = None
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    day_of_week: Optional[str] = None
+
 class SlotOut(BaseModel):
     id: int
     name: str
     start_time: str
     end_time: str
-    day_of_week: Optional[str]
+    day_of_week: Optional[str] = None
+    # Dynamic runtime slot availability states
+    is_disabled: bool = False
+    disabled_reason: Optional[str] = None
+    is_passed: bool = False
+    is_active_now: bool = False
+    is_accessed: bool = False
+    accessed_by_teacher_id: Optional[int] = None
+    accessed_by_teacher_name: Optional[str] = None
+    is_my_session: bool = False
+    active_session_id: Optional[int] = None
+    session_status: Optional[str] = None
 
     class Config:
         from_attributes = True

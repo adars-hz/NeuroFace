@@ -171,9 +171,9 @@ def get_pending_leaves_count(
     Return count of pending leave applications for the current user:
     - Admin: All pending applications
     - Student: Their own pending applications
-    - HOD: All pending applications in their department
-    - Class Advisor: Pending applications from advised classes + taught subjects
-    - Teacher: Pending applications for assigned subjects / classes
+    - HOD: Pending applications in their department
+    - Class Advisor: Pending applications from their advised class(es)
+    - Regular Teacher: 0 (Only HOD and assigned Class Advisors review leaves)
     """
     query = db.query(LeaveApplication).filter(LeaveApplication.status == LeaveStatus.PENDING)
 
@@ -186,34 +186,21 @@ def get_pending_leaves_count(
         if not teacher:
             return {"pending_count": 0}
 
-        if teacher.is_hod and teacher.department_id:
+        is_hod = (teacher.designation == TeacherDesignation.HOD)
+        advised_class_ids = [c.id for c in (teacher.advised_classes or [])]
+
+        # ONLY HOD and assigned Class Advisors have leave review responsibilities
+        if not is_hod and not advised_class_ids:
+            return {"pending_count": 0}
+
+        if is_hod and teacher.department_id:
             query = query.join(Student, LeaveApplication.student_id == Student.id).filter(
                 Student.department_id == teacher.department_id
             )
-        else:
-            advised_class_ids = [c.id for c in (teacher.advised_classes or [])]
-            assigned_subject_ids = [a.subject_id for a in (teacher.assignments or [])]
-            assigned_class_ids = [a.class_id for a in (teacher.assignments or [])]
-
-            conditions = []
-            if advised_class_ids:
-                conditions.append(Student.class_id.in_(advised_class_ids))
-            if assigned_subject_ids:
-                conditions.append(LeaveApplication.subject_id.in_(assigned_subject_ids))
-            if assigned_class_ids:
-                conditions.append(
-                    and_(
-                        LeaveApplication.subject_id == None,
-                        Student.class_id.in_(assigned_class_ids)
-                    )
-                )
-
-            if conditions:
-                query = query.join(Student, LeaveApplication.student_id == Student.id).filter(
-                    or_(*conditions)
-                )
-            else:
-                return {"pending_count": 0}
+        elif advised_class_ids:
+            query = query.join(Student, LeaveApplication.student_id == Student.id).filter(
+                Student.class_id.in_(advised_class_ids)
+            )
 
     return {"pending_count": query.count()}
 
@@ -227,8 +214,8 @@ def get_leave_applications(
     Retrieve leave applications:
     - Students see only their own.
     - HODs see all department applications.
-    - Class Advisors see all applications from their advised class(es).
-    - Teachers see applications from their assigned subjects / classes.
+    - Class Advisors see applications from their advised class(es).
+    - Regular faculty have no leave review scope (returns empty).
     - Admins see all applications.
     """
     query = db.query(LeaveApplication)
@@ -249,34 +236,21 @@ def get_leave_applications(
         if not teacher:
             return []
 
-        if teacher.is_hod and teacher.department_id:
+        is_hod = (teacher.designation == TeacherDesignation.HOD)
+        advised_class_ids = [c.id for c in (teacher.advised_classes or [])]
+
+        # ONLY HOD and assigned Class Advisors can view leaves for review
+        if not is_hod and not advised_class_ids:
+            return []
+
+        if is_hod and teacher.department_id:
             query = query.join(Student, LeaveApplication.student_id == Student.id).filter(
                 Student.department_id == teacher.department_id
             )
-        else:
-            advised_class_ids = [c.id for c in (teacher.advised_classes or [])]
-            assigned_subject_ids = [a.subject_id for a in (teacher.assignments or [])]
-            assigned_class_ids = [a.class_id for a in (teacher.assignments or [])]
-
-            conditions = []
-            if advised_class_ids:
-                conditions.append(Student.class_id.in_(advised_class_ids))
-            if assigned_subject_ids:
-                conditions.append(LeaveApplication.subject_id.in_(assigned_subject_ids))
-            if assigned_class_ids:
-                conditions.append(
-                    and_(
-                        LeaveApplication.subject_id == None,
-                        Student.class_id.in_(assigned_class_ids)
-                    )
-                )
-
-            if conditions:
-                query = query.join(Student, LeaveApplication.student_id == Student.id).filter(
-                    or_(*conditions)
-                )
-            else:
-                return []
+        elif advised_class_ids:
+            query = query.join(Student, LeaveApplication.student_id == Student.id).filter(
+                Student.class_id.in_(advised_class_ids)
+            )
 
     applications = query.order_by(LeaveApplication.created_at.desc()).all()
 
@@ -342,13 +316,36 @@ def review_leave_application(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Authorized Teacher or HOD approves or rejects a leave application."""
+    """Only HOD, assigned Class Advisor, or Admin approves or rejects a leave application."""
     if current_user.role not in [UserRole.TEACHER, UserRole.ADMIN]:
         raise HTTPException(status_code=403, detail="Unauthorized to review leave applications.")
 
     app = db.query(LeaveApplication).filter(LeaveApplication.id == id).first()
     if not app:
         raise HTTPException(status_code=404, detail="Leave application not found")
+
+    if current_user.role != UserRole.ADMIN:
+        teacher = current_user.teacher_profile
+        if not teacher:
+            raise HTTPException(status_code=403, detail="Teacher profile not found.")
+
+        from app.models.user import TeacherDesignation
+        is_hod = (teacher.designation == TeacherDesignation.HOD)
+        advised_class_ids = [c.id for c in (teacher.advised_classes or [])]
+        student_class_id = app.student.class_id if app.student else None
+        is_advisor = (student_class_id is not None and student_class_id in advised_class_ids)
+
+        if not is_hod and not is_advisor:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized: Only the Head of Department (HOD) or the student's assigned Class Advisor can review leave letters."
+            )
+
+        if is_hod and teacher.department_id and app.student and app.student.department_id != teacher.department_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Unauthorized: HOD can only review leave applications from students in their department."
+            )
 
     app.status = req.status
     app.reviewed_by = current_user.id

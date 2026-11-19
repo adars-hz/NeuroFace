@@ -56,13 +56,13 @@ const MedicalWaiverPage = () => {
           <div className="inline-flex items-center text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200 mb-1">
             <Award className="w-3.5 h-3.5 mr-1" /> HOD Designated Authority
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 font-heading">Medical Attendance Waivers</h1>
-          <p className="text-slate-600 text-sm">Approve official medical certificate waivers to legally compensate missed lectures</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">Medical Attendance Waivers</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm">Approve official medical certificate waivers to legally compensate missed lectures</p>
         </div>
 
         <button
           onClick={() => setShowModal(true)}
-          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-black hover:bg-neutral-800 text-white text-sm font-semibold shadow transition-colors"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow transition-colors"
         >
           <Plus className="w-4 h-4 mr-1.5" />
           Grant Medical Waiver
@@ -77,12 +77,12 @@ const MedicalWaiverPage = () => {
       )}
 
       {/* Information Banner */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        <div className="font-bold text-slate-900 font-heading text-sm flex items-center space-x-2">
+      <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+        <div className="font-bold text-slate-900 dark:text-white font-heading text-sm flex items-center space-x-2">
           <Shield className="w-4 h-4 text-amber-600" />
           <span>University Medical Waiver Policy & Audit Guidelines</span>
         </div>
-        <p className="text-xs text-slate-600 leading-relaxed">
+        <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
           Per institutional regulations, medical waivers do <b>not</b> delete original lecture absences. Instead, approved medical waivers append credit towards the student's effective attendance score:
           <span className="block mt-1 font-mono text-teal-700 font-semibold">
             Effective Attendance % = min(100, (Present Classes + Waived Classes) / Total Sessions Held * 100)
@@ -94,9 +94,9 @@ const MedicalWaiverPage = () => {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-lg font-bold text-slate-900 font-heading">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
                 Grant HOD Medical Waiver
               </h3>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600">
@@ -106,12 +106,12 @@ const MedicalWaiverPage = () => {
 
             <form onSubmit={handleGrantWaiver} className="space-y-4 text-sm">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Student</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Student</label>
                 <select
                   required
                   value={formData.student_id}
                   onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-xl"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">Select Student</option>
                   {students.map((s) => (
@@ -121,12 +121,12 @@ const MedicalWaiverPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Course / Subject</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Course / Subject</label>
                 <select
                   required
                   value={formData.subject_id}
                   onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-xl"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                 >
                   <option value="">Select Subject</option>
                   {subjects.map((sub) => (
@@ -136,7 +136,7 @@ const MedicalWaiverPage = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Number of Missed Classes to Waive
                 </label>
                 <input
@@ -146,12 +146,12 @@ const MedicalWaiverPage = () => {
                   required
                   value={formData.waived_classes_count}
                   onChange={(e) => setFormData({ ...formData, waived_classes_count: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-xl"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">
                   Official Remarks / Certificate Reference
                 </label>
                 <textarea

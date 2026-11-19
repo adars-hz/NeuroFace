@@ -65,14 +65,14 @@ const StudentDashboard = () => {
 
       {/* Face Registration Status Callout */}
       {!profile?.face_registered ? (
-        <div className="p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="p-5 rounded-2xl bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 dark:border-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start space-x-3">
             <div className="p-2 rounded-xl bg-amber-100 text-amber-800 flex-shrink-0">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-amber-900 text-sm">Facial Biometric Template Not Registered</h3>
-              <p className="text-xs text-amber-800 mt-0.5">
+              <h3 className="font-bold text-amber-900 dark:text-amber-200 text-sm">Facial Biometric Template Not Registered</h3>
+              <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
                 Your face has not been enrolled into the ArcFace neural recognition engine. The classroom camera will flag you as unknown until registration is completed.
               </p>
             </div>
@@ -85,8 +85,8 @@ const StudentDashboard = () => {
           </Link>
         </div>
       ) : (
-        <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center space-x-3 text-xs text-emerald-900">
+        <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center space-x-3 text-xs text-emerald-900 dark:text-emerald-200">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
             <span><b>Biometrics Enrolled:</b> Your 512-D ArcFace template is active. Re-registration requires Admin/HOD authorization.</span>
           </div>
@@ -101,13 +101,13 @@ const StudentDashboard = () => {
 
       {/* Attendance Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Overall Attendance</div>
-          <div className="text-3xl font-extrabold text-slate-900 font-heading mt-2">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Overall Attendance</div>
+          <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-heading mt-2">
             {report?.overall_attendance_pct || 0}%
           </div>
-          <div className="text-xs text-slate-500 mt-1">Across all registered subjects</div>
-          <div className="w-full bg-slate-100 rounded-full h-2 mt-3 overflow-hidden">
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Across all registered subjects</div>
+          <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-2 mt-3 overflow-hidden">
             <div
               className={`h-2 rounded-full ${
                 (report?.overall_attendance_pct || 0) >= 85
@@ -121,12 +121,12 @@ const StudentDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Registered Courses</div>
-          <div className="text-3xl font-extrabold text-slate-900 font-heading mt-2">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Registered Courses</div>
+          <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-heading mt-2">
             {report?.subjects?.length || 0}
           </div>
-          <div className="text-xs text-slate-500 mt-1">Active curriculum subjects</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Active curriculum subjects</div>
           <div className="mt-2">
             <Link to="/student/my-attendance" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
               View Attendance Breakdown &rarr;
@@ -134,12 +134,12 @@ const StudentDashboard = () => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">Leave Applications</div>
-          <div className="text-3xl font-extrabold text-slate-900 font-heading mt-2">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Leave Applications</div>
+          <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-heading mt-2">
             <FileText className="w-8 h-8 text-indigo-600 inline" />
           </div>
-          <div className="text-xs text-slate-500 mt-1">Medical leaves & waivers</div>
+          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Medical leaves & waivers</div>
           <div className="mt-2">
             <Link to="/student/apply-leave" className="text-xs font-bold text-indigo-600 hover:text-indigo-700">
               Submit Leave Certificate &rarr;

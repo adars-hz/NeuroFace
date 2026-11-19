@@ -38,35 +38,56 @@ def get_report_students_query(db: Session, current_user: User):
     )
 
 
-def require_student_report_access(db: Session, current_user: User, student: Student) -> None:
+def get_teacher_report_scope(db: Session, current_user: User, student: Student):
+    """
+    Returns:
+      None -> Full curriculum access (Admin, HOD in dept, or designated Class Advisor for this student's class).
+      list[int] -> Restricted to these specific subject IDs (regular faculty member).
+    Raises:
+      HTTPException(403) if completely unauthorized.
+    """
     if current_user.role == UserRole.STUDENT:
         if not current_user.student_profile or current_user.student_profile.id != student.id:
             raise HTTPException(status_code=403, detail="Unauthorized to view other students' reports.")
-        return
+        return None
 
     if current_user.role == UserRole.ADMIN:
-        return
+        return None
 
     if current_user.role != UserRole.TEACHER or not current_user.teacher_profile:
         raise HTTPException(status_code=403, detail="Staff privileges required")
 
     teacher = current_user.teacher_profile
+
+    # 1. HOD has full department scope
     if teacher.designation == TeacherDesignation.HOD:
         if student.department_id == teacher.department_id and teacher.department_id is not None:
-            return
+            return None
         raise HTTPException(status_code=403, detail="Student is outside your department.")
 
-    # Class Advisor has elevated privileges over their advised class
+    # 2. Class Advisor has full scope over their advised class
     advised_classes = getattr(teacher, "advised_classes", None) or []
     if student.class_id and any(c.id == student.class_id for c in advised_classes):
-        return
+        return None
 
-    assignment = db.query(TeacherSubjectClassAssignment.id).filter(
+    # 3. Regular Faculty: ONLY their respective assigned subjects!
+    assignments = db.query(TeacherSubjectClassAssignment.subject_id).filter(
         TeacherSubjectClassAssignment.teacher_id == teacher.id,
         TeacherSubjectClassAssignment.class_id == student.class_id
-    ).first()
-    if not assignment:
-        raise HTTPException(status_code=403, detail="Student is outside your assigned classes.")
+    ).all()
+
+    taught_subject_ids = [a[0] for a in assignments]
+    if not taught_subject_ids:
+        raise HTTPException(
+            status_code=403,
+            detail="Student is outside your assigned classes/subjects."
+        )
+
+    return taught_subject_ids
+
+
+def require_student_report_access(db: Session, current_user: User, student: Student):
+    return get_teacher_report_scope(db, current_user, student)
 
 
 def get_student_or_404(db: Session, student_id: int) -> Student:
@@ -101,11 +122,11 @@ def get_student_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Retrieve full subject-wise attendance, eligibility, and fine status for a student."""
+    """Retrieve full subject-wise attendance (scoped to perspective subject for regular faculty)."""
     student = get_student_or_404(db, student_id)
-    require_student_report_access(db, current_user, student)
+    scope = require_student_report_access(db, current_user, student)
 
-    return calculate_student_full_report(db, student_id)
+    return calculate_student_full_report(db, student_id, filter_subject_ids=scope)
 
 @router.get("/student/{student_id}/export-csv")
 def export_student_csv(
@@ -115,9 +136,9 @@ def export_student_csv(
 ):
     """Download attendance report as a CSV file."""
     student = get_student_or_404(db, student_id)
-    require_student_report_access(db, current_user, student)
+    scope = require_student_report_access(db, current_user, student)
 
-    report = calculate_student_full_report(db, student_id)
+    report = calculate_student_full_report(db, student_id, filter_subject_ids=scope)
     csv_data = generate_student_report_csv(report)
     return Response(
         content=csv_data,
@@ -133,9 +154,9 @@ def export_student_pdf(
 ):
     """Download attendance report as a styled PDF document."""
     student = get_student_or_404(db, student_id)
-    require_student_report_access(db, current_user, student)
+    scope = require_student_report_access(db, current_user, student)
 
-    report = calculate_student_full_report(db, student_id)
+    report = calculate_student_full_report(db, student_id, filter_subject_ids=scope)
     pdf_bytes = generate_student_report_pdf(report)
     return Response(
         content=pdf_bytes,
@@ -156,6 +177,24 @@ def get_class_subject_report(
     if not cls or not sub:
         raise HTTPException(status_code=404, detail="Class or Subject not found")
 
+    if current_user.role == UserRole.TEACHER and current_user.teacher_profile:
+        teacher = current_user.teacher_profile
+        is_hod = (teacher.designation == TeacherDesignation.HOD)
+        advised_class_ids = [c.id for c in (teacher.advised_classes or [])]
+        is_advisor = (class_id in advised_class_ids)
+
+        if not is_hod and not is_advisor:
+            is_assigned = db.query(TeacherSubjectClassAssignment).filter(
+                TeacherSubjectClassAssignment.teacher_id == teacher.id,
+                TeacherSubjectClassAssignment.class_id == class_id,
+                TeacherSubjectClassAssignment.subject_id == subject_id
+            ).first()
+            if not is_assigned:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Unauthorized: You can only view attendance reports for your respective assigned subject."
+                )
+
     assignment = db.query(TeacherSubjectClassAssignment).filter(
         TeacherSubjectClassAssignment.class_id == class_id,
         TeacherSubjectClassAssignment.subject_id == subject_id
@@ -167,7 +206,7 @@ def get_class_subject_report(
         AttendanceSession.assignment_id == (assignment.id if assignment else -1)
     ).count()
 
-    students = db.query(Student).filter(Student.class_id == class_id).all()
+    students = db.query(Student).filter(Student.class_id == class_id).order_by(Student.register_number.asc()).all()
     fine_rule = get_active_fine_rule(db)
 
     rows: list[ClassAttendanceRow] = []

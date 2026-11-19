@@ -341,8 +341,8 @@ const FaceRegistrationPage = () => {
         <div className="inline-flex items-center text-xs font-bold text-teal-700 bg-teal-50 px-2.5 py-1 rounded-full border border-teal-200 mb-1">
           <ShieldCheck className="w-3.5 h-3.5 mr-1" /> Guided Biometric Enrollment
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 font-heading">Student Face Registration</h1>
-        <p className="text-slate-600 text-sm">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">Student Face Registration</h1>
+        <p className="text-slate-600 dark:text-slate-400 text-sm">
           Follow the step-by-step instructions to capture 5 distinct facial focus angles for high-accuracy recognition.
         </p>
       </div>
@@ -352,7 +352,7 @@ const FaceRegistrationPage = () => {
         <div className="space-y-6">
           {/* Subcase 1A: Pending Approval */}
           {regStatus?.has_pending_request ? (
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
               <div className="w-16 h-16 rounded-2xl bg-amber-50 border-2 border-amber-200 flex items-center justify-center text-amber-600 mx-auto">
                 <Clock className="w-8 h-8 animate-pulse" />
               </div>
@@ -382,7 +382,7 @@ const FaceRegistrationPage = () => {
                 </div>
                 <div className="flex flex-col space-y-1">
                   <span className="text-slate-500 font-semibold">Reason Provided:</span>
-                  <p className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-800 text-xs italic">
+                  <p className="p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs italic">
                     "{regStatus.latest_request?.reason || 'Appearance update'}"
                   </p>
                 </div>
@@ -407,7 +407,7 @@ const FaceRegistrationPage = () => {
             </div>
           ) : (
             /* Subcase 1B: No pending request, student can submit request to HOD/Admin */
-            <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+            <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
               <div className="w-16 h-16 rounded-2xl bg-teal-50 border-2 border-teal-200 flex items-center justify-center text-teal-600 mx-auto">
                 <Lock className="w-8 h-8" />
               </div>
@@ -432,7 +432,7 @@ const FaceRegistrationPage = () => {
                   <p>
                     Your last re-registration request was reviewed by <b>{regStatus.latest_request.reviewed_by_name || 'HOD/Admin'}</b>:
                   </p>
-                  <p className="italic bg-white/70 p-2 rounded-lg border border-rose-200">
+                  <p className="italic bg-white/70 dark:bg-slate-800/80 p-2 rounded-lg border border-rose-200 dark:border-rose-900/60 text-slate-800 dark:text-slate-200">
                     "{regStatus.latest_request.admin_remarks || 'Rejected'}"
                   </p>
                   <p className="text-[11px] text-rose-700 pt-1">
@@ -466,7 +466,7 @@ const FaceRegistrationPage = () => {
                   <select
                     value={reasonCategory}
                     onChange={(e) => setReasonCategory(e.target.value)}
-                    className="w-full text-xs rounded-xl border border-slate-300 p-3 bg-white focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                     required
                   >
                     {REASON_PRESETS.map((p) => (
@@ -484,7 +484,7 @@ const FaceRegistrationPage = () => {
                     value={additionalNotes}
                     onChange={(e) => setAdditionalNotes(e.target.value)}
                     placeholder="Provide any details to help your HOD or Admin review your request..."
-                    className="w-full text-xs rounded-xl border border-slate-300 p-3 focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    className="w-full text-xs rounded-xl border border-slate-300 dark:border-slate-700 p-3 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
 
@@ -570,7 +570,7 @@ const FaceRegistrationPage = () => {
           )}
 
           {/* Main Card */}
-          <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+          <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
             {/* Step Indicator Tracker Bar */}
             <div className="grid grid-cols-5 gap-1 sm:gap-2">
               {POSES.map((p, idx) => {

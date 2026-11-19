@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { formatLocalTime } from '../../utils/dateUtils';
 import {
   Camera, CheckCircle2, UserCheck, AlertTriangle, Clock,
   StopCircle, Users, Sparkles, Shield, UserX, X, RotateCcw,
-  SwitchCamera
+  SwitchCamera, Lock, ArrowUpDown
 } from 'lucide-react';
 
 const LiveAttendancePage = () => {
@@ -33,6 +33,34 @@ const LiveAttendancePage = () => {
   const [facingMode, setFacingMode] = useState('user'); // Default to 'user' (front selfie camera) for student passing
   const [lastMarkedStudent, setLastMarkedStudent] = useState(null);
   const [aiServerStatus, setAiServerStatus] = useState('connected');
+  const [unauthorizedError, setUnauthorizedError] = useState('');
+  const [rosterSortBy, setRosterSortBy] = useState('time_desc'); // 'time_desc' | 'usn_asc' | 'name_asc'
+
+  const sortedPresentRecords = useMemo(() => {
+    const list = [...presentRecords];
+    switch (rosterSortBy) {
+      case 'usn_asc':
+        return list.sort((a, b) =>
+          (a.register_number || '').localeCompare(b.register_number || '', undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          })
+        );
+      case 'name_asc':
+        return list.sort((a, b) =>
+          (a.student_name || '').localeCompare(b.student_name || '', undefined, {
+            sensitivity: 'base',
+          })
+        );
+      case 'time_desc':
+      default:
+        return list.sort((a, b) => {
+          const tA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+          const tB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+          return tB - tA;
+        });
+    }
+  }, [presentRecords, rosterSortBy]);
 
   // 1. Fetch initial session statistics & prior records
   useEffect(() => {
@@ -48,6 +76,12 @@ const LiveAttendancePage = () => {
         setPresentRecords(recRes.data.filter((r) => r.status === 'PRESENT'));
       } catch (err) {
         console.error('Session load error', err);
+        if (err.response?.status === 403) {
+          setUnauthorizedError(
+            err.response?.data?.detail ||
+            'Unauthorized: Only the faculty member who started this session can access its live camera feed.'
+          );
+        }
       }
     };
     fetchSession();
@@ -319,10 +353,36 @@ const LiveAttendancePage = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  if (unauthorizedError) {
+    return (
+      <div className="max-w-xl mx-auto my-12 p-8 bg-white dark:bg-slate-900 rounded-3xl border border-amber-200 dark:border-amber-900/60 shadow-xl text-center space-y-5">
+        <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/60 rounded-2xl flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400 ring-8 ring-amber-50 dark:ring-amber-950/30">
+          <Lock className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold font-heading text-slate-900 dark:text-white">
+            Slot & Attendance Session Locked
+          </h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            {unauthorizedError}
+          </p>
+        </div>
+        <div className="pt-2">
+          <button
+            onClick={() => navigate('/teacher')}
+            className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-md transition-all"
+          >
+            Return to Faculty Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Session Header & Telemetry Summary Banner */}
-      <div className="p-4 sm:p-6 bg-white rounded-2xl sm:rounded-3xl border border-slate-200 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
+      <div className="p-4 sm:p-6 bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 sm:gap-6">
         <div>
           <div className="flex items-center space-x-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -470,15 +530,15 @@ const LiveAttendancePage = () => {
         <div className="space-y-4 sm:space-y-6">
           {/* Four Counter Cards */}
           <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="text-[10px] sm:text-[11px] font-bold text-slate-500 uppercase tracking-wider">Detected</div>
-              <div className="text-xl sm:text-2xl font-extrabold text-slate-900 font-heading mt-0.5">
+              <div className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white font-heading mt-0.5">
                 {telemetry.total_detected}
               </div>
               <div className="text-[10px] text-slate-400 mt-0.5">Faces in frame</div>
             </div>
 
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="text-[10px] sm:text-[11px] font-bold text-teal-600 uppercase tracking-wider">Recognized</div>
               <div className="text-xl sm:text-2xl font-extrabold text-teal-600 font-heading mt-0.5">
                 {telemetry.recognized_count}
@@ -486,7 +546,7 @@ const LiveAttendancePage = () => {
               <div className="text-[10px] text-slate-400 mt-0.5">Registered matches</div>
             </div>
 
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="text-[10px] sm:text-[11px] font-bold text-rose-600 uppercase tracking-wider">Unknown</div>
               <div className="text-xl sm:text-2xl font-extrabold text-rose-600 font-heading mt-0.5">
                 {telemetry.unknown_count}
@@ -494,7 +554,7 @@ const LiveAttendancePage = () => {
               <div className="text-[10px] text-slate-400 mt-0.5">Unregistered</div>
             </div>
 
-            <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="bg-white dark:bg-slate-900 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="text-[10px] sm:text-[11px] font-bold text-blue-600 uppercase tracking-wider">Present Count</div>
               <div className="text-xl sm:text-2xl font-extrabold text-blue-600 font-heading mt-0.5">
                 {telemetry.present_count}
@@ -504,21 +564,64 @@ const LiveAttendancePage = () => {
           </div>
 
           {/* Real-time Present Roster List */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 font-heading text-xs sm:text-sm flex items-center space-x-2">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm p-4 sm:p-5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <h3 className="font-bold text-slate-900 dark:text-white font-heading text-xs sm:text-sm flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 text-teal-600" />
                 <span>Marked Present ({presentRecords.length})</span>
               </h3>
+
+              {/* Live Present List Sort Controls */}
+              {presentRecords.length > 1 && (
+                <div className="flex items-center space-x-1">
+                  <span className="text-[10px] text-slate-400 font-semibold mr-1">Sort:</span>
+                  <button
+                    type="button"
+                    onClick={() => setRosterSortBy('time_desc')}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all border ${
+                      rosterSortBy === 'time_desc'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-300 dark:border-slate-600'
+                        : 'bg-transparent text-slate-400 border-transparent hover:text-slate-600'
+                    }`}
+                    title="Order by Time Marked"
+                  >
+                    Time
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRosterSortBy('usn_asc')}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all border ${
+                      rosterSortBy === 'usn_asc'
+                        ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800'
+                        : 'bg-transparent text-slate-400 border-transparent hover:text-indigo-600'
+                    }`}
+                    title="Order by Register / USN Number"
+                  >
+                    USN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRosterSortBy('name_asc')}
+                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all border ${
+                      rosterSortBy === 'name_asc'
+                        ? 'bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 border-teal-200 dark:border-teal-800'
+                        : 'bg-transparent text-slate-400 border-transparent hover:text-teal-600'
+                    }`}
+                    title="Order Alphabetically by Name"
+                  >
+                    A-Z
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="max-h-[240px] sm:max-h-[280px] overflow-y-auto space-y-2 pr-1">
-              {presentRecords.length === 0 ? (
+              {sortedPresentRecords.length === 0 ? (
                 <div className="p-6 text-center text-xs text-slate-400">
                   Waiting for students to appear in camera view...
                 </div>
               ) : (
-                presentRecords.map((r) => (
+                sortedPresentRecords.map((r) => (
                   <div
                     key={r.id}
                     className="p-2 sm:p-2.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs"

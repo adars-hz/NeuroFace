@@ -169,15 +169,18 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <CheckSquare className="w-4 h-4" />
                   <span>Take Attendance</span>
                 </NavLink>
-                <NavLink to="/teacher/leaves" className={linkClass} onClick={handleLinkClick}>
-                  <FileText className="w-4 h-4" />
-                  <span className="flex-1">Review Leaves & OCR</span>
-                  {pendingLeavesCount > 0 && (
-                    <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">
-                      {pendingLeavesCount}
-                    </span>
-                  )}
-                </NavLink>
+                {/* Review Leaves & OCR: ONLY visible to HOD, Class Advisors, or Admin */}
+                {(isHod || isAdvisor || role === 'ADMIN') && (
+                  <NavLink to="/teacher/leaves" className={linkClass} onClick={handleLinkClick}>
+                    <FileText className="w-4 h-4" />
+                    <span className="flex-1">Review Leaves & OCR</span>
+                    {pendingLeavesCount > 0 && (
+                      <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[10px] font-bold bg-rose-600 text-white">
+                        {pendingLeavesCount}
+                      </span>
+                    )}
+                  </NavLink>
+                )}
                 <NavLink to="/teacher/student-reports" className={linkClass} onClick={handleLinkClick}>
                   <FileCheck2 className="w-4 h-4" />
                   <span>Student Reports</span>

@@ -99,28 +99,32 @@ const TeacherDashboard = () => {
               <Zap className="w-4 h-4 mr-2" />
               Take Attendance (Smart & Live)
             </Link>
-            <Link
-              to="/teacher/leaves"
-              className="inline-flex items-center px-5 py-3 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-sm transition-colors border border-indigo-400/40"
-            >
-              <FileText className="w-4 h-4 mr-2 text-indigo-200" />
-              Review Leaves & OCR
-              {pendingCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-400 text-slate-950">
-                  {pendingCount}
-                </span>
-              )}
-            </Link>
+            {/* Review Leaves shortcut: ONLY for HOD, Class Advisors, or Admin */}
+            {(user?.is_hod || user?.is_class_advisor || user?.role === 'ADMIN') && (
+              <Link
+                to="/teacher/leaves"
+                className="inline-flex items-center px-5 py-3 rounded-xl bg-indigo-800/80 hover:bg-indigo-800 text-white font-semibold text-sm transition-colors border border-indigo-400/40"
+              >
+                <FileText className="w-4 h-4 mr-2 text-indigo-200" />
+                Review Leaves & OCR
+                {pendingCount > 0 && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-extrabold bg-amber-400 text-slate-950">
+                    {pendingCount}
+                  </span>
+                )}
+              </Link>
+            )}
           </div>
         </div>
       </div>
 
-      {/* STUDENT LEAVES & MEDICAL CERTIFICATES ACTION CENTER */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+      {/* STUDENT LEAVES & MEDICAL CERTIFICATES ACTION CENTER - ONLY FOR HOD & CLASS ADVISORS */}
+      {(user?.is_hod || user?.is_class_advisor || user?.role === 'ADMIN') && (
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
             <div className="flex items-center space-x-2">
-              <h2 className="text-lg font-bold text-slate-900 font-heading">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
                 Student Leaves & Medical Certificates
               </h2>
               {pendingCount > 0 ? (
@@ -152,11 +156,11 @@ const TeacherDashboard = () => {
         </div>
 
         {pendingLeaves.length === 0 ? (
-          <div className="py-6 px-4 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-2">
+          <div className="py-6 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-center space-y-2">
             <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-5 h-5" />
             </div>
-            <p className="text-sm font-semibold text-slate-800">No Pending Leave Applications</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">No Pending Leave Applications</p>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
               All leave requests and medical certificates submitted by students have been reviewed.
             </p>
@@ -168,12 +172,12 @@ const TeacherDashboard = () => {
               return (
                 <div
                   key={leave.id}
-                  className="p-5 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-4 hover:border-indigo-300 hover:shadow-md transition-all flex flex-col justify-between"
+                  className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-sm space-y-4 hover:border-indigo-500 hover:shadow-md transition-all flex flex-col justify-between"
                 >
                   <div className="space-y-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-bold text-slate-900 text-sm">{leave.student_name}</h4>
+                        <h4 className="font-bold text-slate-900 dark:text-white text-sm">{leave.student_name}</h4>
                         <span className="font-mono text-xs text-slate-500">{leave.register_number}</span>
                       </div>
                       <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
@@ -193,7 +197,7 @@ const TeacherDashboard = () => {
                         <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span className="truncate">{leave.subject_name || 'All Subjects'}</span>
                       </div>
-                      <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700 text-xs italic">
+                      <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs italic">
                         "{leave.reason}"
                       </div>
                     </div>
@@ -230,7 +234,7 @@ const TeacherDashboard = () => {
                     )}
                   </div>
 
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
                     <span className="text-[11px] text-slate-400 font-medium">
                       Submitted {new Date(leave.created_at).toLocaleDateString()}
                     </span>
@@ -250,12 +254,13 @@ const TeacherDashboard = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* Authorized Courses / Assigned Subjects */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 font-heading">My Assigned Courses & Classes</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white font-heading">My Assigned Courses & Classes</h2>
             <p className="text-xs text-slate-500">Strictly authorized subjects assigned by administration</p>
           </div>
           <span className="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg border border-indigo-200">
@@ -265,21 +270,21 @@ const TeacherDashboard = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {assignments.map((a) => (
-            <div key={a.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 hover:border-indigo-300 transition-all">
+            <div key={a.id} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-4 hover:border-indigo-500 transition-all">
               <div className="flex items-start justify-between">
                 <div>
                   <span className="text-xs font-mono font-bold text-indigo-700 uppercase px-2 py-0.5 bg-indigo-50 rounded border border-indigo-200">
                     {a.subject_code}
                   </span>
-                  <h3 className="font-bold text-slate-900 font-heading text-base mt-2">{a.subject_name}</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-white font-heading text-base mt-2">{a.subject_name}</h3>
                 </div>
                 <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
                   <BookOpen className="w-5 h-5" />
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="font-semibold text-slate-600 flex items-center">
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-600 dark:text-slate-400 flex items-center">
                   <Users className="w-3.5 h-3.5 mr-1 text-slate-400" />
                   {a.class_name}
                 </span>
@@ -297,12 +302,12 @@ const TeacherDashboard = () => {
 
       {/* Historical Sessions Table */}
       <div>
-        <h2 className="text-lg font-bold text-slate-900 font-heading mb-3">Recent Attendance Sessions</h2>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white font-heading mb-3">Recent Attendance Sessions</h2>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           {/* Desktop View Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left text-sm min-w-[640px]">
-              <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
                 <tr>
                   <th className="px-6 py-3.5">Date & Time</th>
                   <th className="px-6 py-3.5">Course / Subject</th>
@@ -312,16 +317,16 @@ const TeacherDashboard = () => {
                   <th className="px-6 py-3.5">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {sessions.slice(0, 8).map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-3.5 text-xs text-slate-600 font-medium">
+                  <tr key={s.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                    <td className="px-6 py-3.5 text-xs text-slate-600 dark:text-slate-400 dark:text-slate-400 font-medium">
                       {s.session_date} ({formatLocalTime(s.start_time, { hour: '2-digit', minute: '2-digit' })})
                     </td>
-                    <td className="px-6 py-3.5 font-semibold text-slate-900">
+                    <td className="px-6 py-3.5 font-semibold text-slate-900 dark:text-white">
                       {s.subject_name}
                     </td>
-                    <td className="px-6 py-3.5 text-xs text-slate-600">
+                    <td className="px-6 py-3.5 text-xs text-slate-600 dark:text-slate-400 dark:text-slate-400">
                       {s.class_name}
                     </td>
                     <td className="px-6 py-3.5 text-xs text-slate-500 font-mono">
@@ -334,7 +339,7 @@ const TeacherDashboard = () => {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
                         s.status === 'ACTIVE'
                           ? 'bg-emerald-100 text-emerald-800 animate-pulse'
-                          : 'bg-slate-100 text-slate-700'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                       }`}>
                         {s.status}
                       </span>
@@ -354,7 +359,7 @@ const TeacherDashboard = () => {
           </div>
 
           {/* Mobile Responsive Cards */}
-          <div className="md:hidden divide-y divide-slate-100">
+          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-800">
             {sessions.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-400">
                 No attendance sessions recorded yet.
@@ -364,7 +369,7 @@ const TeacherDashboard = () => {
                 <div key={s.id} className="p-4 space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="font-bold text-slate-900 text-sm">{s.subject_name}</div>
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">{s.subject_name}</div>
                       <div className="text-xs text-slate-500 font-medium mt-0.5">
                         {s.class_name} &bull; <span className="font-mono">{s.slot_name}</span>
                       </div>
@@ -372,7 +377,7 @@ const TeacherDashboard = () => {
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
                       s.status === 'ACTIVE'
                         ? 'bg-emerald-100 text-emerald-800 animate-pulse'
-                        : 'bg-slate-100 text-slate-700'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
                     }`}>
                       {s.status}
                     </span>
@@ -406,10 +411,10 @@ const TeacherDashboard = () => {
       {/* DASHBOARD REVIEW MODAL */}
       {reviewModal && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 border border-slate-200 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl space-y-4 sm:space-y-5 border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
               <div>
-                <h3 className="text-lg font-bold text-slate-900 font-heading">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
                   Review Leave Application #{reviewModal.id}
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -424,38 +429,38 @@ const TeacherDashboard = () => {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="space-y-3 text-xs bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
               <div>
                 <span className="text-slate-500 font-semibold">Student:</span>{' '}
-                <span className="font-bold text-slate-800">{reviewModal.student_name} ({reviewModal.register_number})</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{reviewModal.student_name} ({reviewModal.register_number})</span>
               </div>
               <div>
                 <span className="text-slate-500 font-semibold">Leave Scope:</span>{' '}
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
                   reviewModal.day_type === 'HALF_DAY' || reviewModal.subject_id
                     ? 'bg-purple-100 text-purple-800'
-                    : 'bg-slate-100 text-slate-800'
+                    : 'bg-slate-100 text-slate-800 dark:text-slate-200'
                 }`}>
                   {reviewModal.day_type === 'HALF_DAY' || reviewModal.subject_id ? 'HALF DAY' : 'FULL DAY'}
                 </span>
-                <span className="ml-2 font-bold text-slate-800">
+                <span className="ml-2 font-bold text-slate-800 dark:text-slate-200">
                   {reviewModal.subject_name || 'All Subjects (Full Day Leave)'}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500 font-semibold">Leave Duration:</span>{' '}
-                <span className="font-bold text-slate-800">{reviewModal.start_date} &rarr; {reviewModal.end_date}</span>
+                <span className="font-bold text-slate-800 dark:text-slate-200">{reviewModal.start_date} &rarr; {reviewModal.end_date}</span>
               </div>
               <div>
                 <span className="text-slate-500 font-semibold">Stated Reason:</span>{' '}
-                <p className="mt-1 text-slate-700 bg-white p-2.5 rounded-xl border">{reviewModal.reason}</p>
+                <p className="mt-1 text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200">{reviewModal.reason}</p>
               </div>
             </div>
 
             {/* Attached Documents & OCR Telemetry */}
             {reviewModal.documents && reviewModal.documents.length > 0 && (
               <div className="space-y-2">
-                <div className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center justify-between">
+                <div className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center justify-between">
                   <span>Attached Document & OCR Telemetry</span>
                   <span className="text-[10px] text-teal-700 bg-teal-50 border border-teal-200 px-2 py-0.5 rounded-full font-semibold">
                     {reviewModal.documents.length} File(s)
@@ -528,7 +533,7 @@ const TeacherDashboard = () => {
 
             <form onSubmit={handleReviewSubmit} className="space-y-4 text-sm">
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
                   Review Decision
                 </label>
                 <div className="grid grid-cols-2 gap-3">
@@ -538,7 +543,7 @@ const TeacherDashboard = () => {
                     className={`py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center justify-center space-x-1.5 ${
                       reviewForm.status === 'APPROVED'
                         ? 'bg-emerald-600 text-white border-emerald-600 shadow'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 dark:hover:bg-slate-800/40'
                     }`}
                   >
                     <CheckCircle className="w-4 h-4" />
@@ -550,7 +555,7 @@ const TeacherDashboard = () => {
                     className={`py-2.5 rounded-xl font-bold text-xs border transition-all flex items-center justify-center space-x-1.5 ${
                       reviewForm.status === 'REJECTED'
                         ? 'bg-rose-600 text-white border-rose-600 shadow'
-                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/80 dark:hover:bg-slate-800/40'
                     }`}
                   >
                     <XCircle className="w-4 h-4" />
@@ -560,7 +565,7 @@ const TeacherDashboard = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                   Faculty Review Remarks
                 </label>
                 <textarea
@@ -568,7 +573,7 @@ const TeacherDashboard = () => {
                   value={reviewForm.remarks}
                   onChange={(e) => setReviewForm({ ...reviewForm, remarks: e.target.value })}
                   placeholder="e.g. Leave letter and medical record verified. Approved."
-                  className="w-full px-3 py-2 border rounded-xl text-xs"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl text-xs focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
 
@@ -576,7 +581,7 @@ const TeacherDashboard = () => {
                 <button
                   type="button"
                   onClick={() => setReviewModal(null)}
-                  className="px-4 py-2 border rounded-xl text-xs font-semibold text-slate-600"
+                  className="px-4 py-2 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Cancel
                 </button>

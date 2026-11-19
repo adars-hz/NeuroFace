@@ -145,8 +145,8 @@ const ApplyLeavePage = () => {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900 font-heading">Submit Leave Application</h1>
-        <p className="text-slate-600 text-sm">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">Submit Leave Application</h1>
+        <p className="text-slate-600 dark:text-slate-400 text-sm">
           Upload medical certificates or leave letters. Automated OCR detects dates, reasons, and whether the leave is for a <strong>Full Day</strong> or <strong>Half Day</strong>.
         </p>
       </div>
@@ -158,10 +158,10 @@ const ApplyLeavePage = () => {
         </div>
       )}
 
-      <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+      <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
         {/* Document Upload Zone with OCR trigger */}
         <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
             Upload Leave Document / Medical Certificate
           </label>
           <div className="border-2 border-dashed border-slate-300 rounded-2xl p-6 text-center hover:border-teal-500 transition-colors bg-slate-50/50">
@@ -269,7 +269,7 @@ const ApplyLeavePage = () => {
         <form onSubmit={handleSubmit} className="space-y-5 text-sm">
           {/* LEAVE DURATION / SCOPE SELECTOR */}
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
               Leave Duration Type
             </label>
             <div className="grid grid-cols-2 gap-3">
@@ -278,8 +278,8 @@ const ApplyLeavePage = () => {
                 onClick={() => setFormData({ ...formData, day_type: 'FULL_DAY', subject_id: '' })}
                 className={`p-3.5 rounded-2xl border text-left transition-all flex items-start space-x-3 ${
                   formData.day_type === 'FULL_DAY'
-                    ? 'border-teal-500 bg-teal-50/60 shadow-sm ring-1 ring-teal-500'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    ? 'border-teal-500 bg-teal-50/60 dark:bg-teal-950/40 shadow-sm ring-1 ring-teal-500'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
                 }`}
               >
                 <div className={`p-2 rounded-xl shrink-0 ${
@@ -288,11 +288,11 @@ const ApplyLeavePage = () => {
                   <Calendar className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-bold text-xs text-slate-900 flex items-center space-x-1.5">
+                  <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center space-x-1.5">
                     <span>Full Day Leave</span>
                     {formData.day_type === 'FULL_DAY' && <Check className="w-3.5 h-3.5 text-teal-600" />}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Applies to all scheduled subjects for the day
                   </p>
                 </div>
@@ -304,7 +304,7 @@ const ApplyLeavePage = () => {
                 className={`p-3.5 rounded-2xl border text-left transition-all flex items-start space-x-3 ${
                   formData.day_type === 'HALF_DAY'
                     ? 'border-purple-500 bg-purple-50/60 shadow-sm ring-1 ring-purple-500'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 bg-white dark:bg-slate-800'
                 }`}
               >
                 <div className={`p-2 rounded-xl shrink-0 ${
@@ -313,11 +313,11 @@ const ApplyLeavePage = () => {
                   <Clock className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="font-bold text-xs text-slate-900 flex items-center space-x-1.5">
+                  <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center space-x-1.5">
                     <span>Half Day / Subject Leave</span>
                     {formData.day_type === 'HALF_DAY' && <Check className="w-3.5 h-3.5 text-purple-600" />}
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     Applies to a specific class or half-day session
                   </p>
                 </div>
@@ -421,10 +421,10 @@ const ApplyLeavePage = () => {
       </div>
 
       {/* MY SUBMITTED APPLICATIONS HISTORY */}
-      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-6 space-y-4">
         <div className="flex items-center justify-between border-b pb-3">
           <div>
-            <h3 className="text-base font-bold text-slate-900 font-heading">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white font-heading">
               My Submitted Leave Applications
             </h3>
             <p className="text-xs text-slate-500">Track approval status from your Class Advisor and HOD</p>
@@ -476,7 +476,7 @@ const ApplyLeavePage = () => {
                   </span>
                 </div>
 
-                <p className="text-xs text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200">
+                <p className="text-xs text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
                   {l.reason}
                 </p>
 
@@ -488,7 +488,7 @@ const ApplyLeavePage = () => {
                         href={d.file_path}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center text-[11px] px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-teal-700 hover:bg-teal-50 font-semibold"
+                        className="inline-flex items-center text-[11px] px-2.5 py-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-slate-700 font-semibold"
                       >
                         <ExternalLink className="w-3 h-3 mr-1" />
                         {d.file_name}

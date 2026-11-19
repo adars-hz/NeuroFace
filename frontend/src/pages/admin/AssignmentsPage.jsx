@@ -81,11 +81,11 @@ const AssignmentsPage = () => {
       <div>
         <div className="flex items-center space-x-2">
           {isAdvisor && <Award className="w-6 h-6 text-teal-600" />}
-          <h1 className="text-2xl font-bold text-slate-900 font-heading">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">
             {isAdvisor ? `Class Advisor: Assign Teachers & Slots` : `Teacher Subject & Class Assignments`}
           </h1>
         </div>
-        <p className="text-slate-600 text-sm mt-1">
+        <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">
           {isAdvisor
             ? `Assign faculty members to subject courses and timetable slots for your advised class (${advisedClasses.join(', ') || 'Class'}).`
             : `Strictly configure which courses faculty members can conduct attendance sessions for.`}
@@ -93,7 +93,7 @@ const AssignmentsPage = () => {
       </div>
 
       {isAdvisor && (
-        <div className="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex items-center space-x-3 text-sm text-teal-900">
+        <div className="bg-teal-50 dark:bg-teal-950/60 border border-teal-200 dark:border-teal-800 rounded-2xl p-4 flex items-center space-x-3 text-sm text-teal-900 dark:text-teal-200">
           <Award className="w-5 h-5 text-teal-600 flex-shrink-0" />
           <div>
             <span className="font-bold">Privileged Teacher Access:</span> As Class Advisor for{' '}
@@ -104,10 +104,10 @@ const AssignmentsPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Assignments Table */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm min-w-[600px]">
-              <thead className="bg-slate-50 border-b text-xs font-bold text-slate-500 uppercase">
+              <thead className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase">
                 <tr>
                   <th className="px-6 py-3.5">Faculty Member</th>
                   <th className="px-6 py-3.5">Assigned Subject</th>
@@ -115,18 +115,18 @@ const AssignmentsPage = () => {
                   <th className="px-6 py-3.5 text-right">Revoke</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {assignments.map((a) => (
-                  <tr key={a.id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-semibold text-slate-900">
+                  <tr key={a.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40">
+                    <td className="px-6 py-4 font-semibold text-slate-900 dark:text-white">
                       <div>{a.teacher_name}</div>
-                      <div className="text-xs font-mono text-slate-500">{a.teacher_code}</div>
+                      <div className="text-xs font-mono text-slate-500 dark:text-slate-400">{a.teacher_code}</div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-semibold text-teal-700">{a.subject_name}</div>
-                      <div className="text-xs font-mono text-slate-500">{a.subject_code}</div>
+                      <div className="font-semibold text-teal-600 dark:text-teal-400">{a.subject_name}</div>
+                      <div className="text-xs font-mono text-slate-500 dark:text-slate-400">{a.subject_code}</div>
                     </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-700">
+                    <td className="px-6 py-4 text-xs font-medium text-slate-700 dark:text-slate-300">
                       {a.class_name}
                     </td>
                     <td className="px-6 py-4 text-right">
@@ -146,16 +146,16 @@ const AssignmentsPage = () => {
         </div>
 
         {/* Create Assignment Form */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm h-fit space-y-4">
-          <h3 className="font-bold text-slate-900 font-heading">Assign Teacher to Class Course</h3>
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm h-fit space-y-4">
+          <h3 className="font-bold text-slate-900 dark:text-white font-heading">Assign Teacher to Class Course</h3>
           <form onSubmit={handleAssign} className="space-y-4 text-sm">
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Faculty Member</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Faculty Member</label>
               <select
                 required
                 value={formData.teacher_id}
                 onChange={(e) => setFormData({ ...formData, teacher_id: e.target.value })}
-                className="w-full px-3 py-2 border rounded-xl"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">Select Faculty</option>
                 {teachers.map((t) => (
@@ -165,12 +165,12 @@ const AssignmentsPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Subject / Course</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Subject / Course</label>
               <select
                 required
                 value={formData.subject_id}
                 onChange={(e) => setFormData({ ...formData, subject_id: e.target.value })}
-                className="w-full px-3 py-2 border rounded-xl"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">Select Subject</option>
                 {subjects.map((s) => (
@@ -180,12 +180,12 @@ const AssignmentsPage = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Class / Batch</label>
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">Class / Batch</label>
               <select
                 required
                 value={formData.class_id}
                 onChange={(e) => setFormData({ ...formData, class_id: e.target.value })}
-                className="w-full px-3 py-2 border rounded-xl"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-teal-500"
               >
                 <option value="">Select Class</option>
                 {classes.map((c) => (
@@ -196,7 +196,7 @@ const AssignmentsPage = () => {
 
             <button
               type="submit"
-              className="w-full py-2.5 bg-black text-white rounded-xl font-semibold hover:bg-neutral-800 shadow transition-colors"
+              className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold shadow-md shadow-teal-600/20 transition-colors"
             >
               Authorize Assignment
             </button>

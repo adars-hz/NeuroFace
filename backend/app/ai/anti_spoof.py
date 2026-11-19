@@ -100,7 +100,7 @@ def detect_phone_quadrilateral(
     """
     Finds rectangular contours in the surround of the face that match a phone screen chassis.
     Must be framing the face (1.35x to 8.5x face area), centered on the face, and have smartphone aspect ratio.
-    Works even if fingers hold the chassis or phone is tilted.
+    Works across all screen brightness levels, even if fingers hold the chassis or phone is tilted.
     """
     fx1, fy1, fx2, fy2 = face_box_in_surround
     fcx, fcy = (fx1 + fx2) // 2, (fy1 + fy2) // 2
@@ -108,7 +108,12 @@ def detect_phone_quadrilateral(
 
     gray = cv2.cvtColor(surround_bgr, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 40, 120)
+
+    # Adaptive Canny thresholds tailored to surrounding luminance (catches dark bezels even at low screen brightness)
+    med = float(np.median(gray))
+    low_th = max(18, int(0.50 * med))
+    high_th = min(150, int(1.30 * med))
+    edges = cv2.Canny(blurred, low_th, high_th)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     dilated = cv2.dilate(edges, kernel, iterations=1)
@@ -134,10 +139,15 @@ def detect_phone_quadrilateral(
         dist_c = np.hypot(rcx - fcx, rcy - fcy)
         solidity = area / float(rect_w * rect_h + 1e-6)
 
-        # Phone portrait (1.30 to 2.65), landscape / tablet (0.38 to 0.75)
-        is_phone_aspect = (1.30 <= aspect <= 2.65) or (0.38 <= 1.0 / aspect <= 0.75)
-        is_centered = dist_c < 0.45 * max(face_w, face_h)
-        is_solid = solidity > 0.60
+        # Approximate polygon to detect phone chassis even if fingers notch the edges
+        peri = cv2.arcLength(cnt, True)
+        approx = cv2.approxPolyDP(cnt, 0.035 * peri, True)
+        is_poly_rect = len(approx) in (4, 5, 6)
+
+        # Phone portrait (1.25 to 2.70), landscape / tablet (0.35 to 0.80)
+        is_phone_aspect = (1.25 <= aspect <= 2.70) or (0.35 <= 1.0 / aspect <= 0.80)
+        is_centered = dist_c < 0.48 * max(face_w, face_h)
+        is_solid = solidity > 0.55 or is_poly_rect
 
         if is_phone_aspect and is_centered and is_solid:
             found_quad = True
@@ -152,60 +162,85 @@ def detect_bezel_lines(
     face_box_in_surround: Tuple[int, int, int, int],
     face_w: int,
     face_h: int
-) -> Tuple[bool, int, int, List[str]]:
+) -> Tuple[bool, float, List[str]]:
     """
-    Detects straight symmetric lines immediately framing the face box (tight screen bezel).
-    Requires both left AND right vertical bezels flanking the face, plus top or bottom bezel.
-    Distant background lines (walls, doors, whiteboards) on one side are ignored.
+    Detects straight symmetric lines immediately framing the face box (screen bezels).
+    Operates across all screen brightness levels:
+      - Flanking vertical bezels (L and R): strong phone chassis
+      - Screen corner bezel (one vertical + one horizontal)
+      - Enclosing horizontal borders (top and bottom)
+    Returns: (has_bezel: bool, bezel_score: float, details: List[str])
     """
     fx1, fy1, fx2, fy2 = face_box_in_surround
     gray = cv2.cvtColor(surround_bgr, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    edges = cv2.Canny(blurred, 40, 120)
 
-    min_line_len = int(min(face_w, face_h) * 0.45)
+    # Adaptive Canny for clear bezel edge response at any screen brightness
+    med = float(np.median(gray))
+    low_th = max(18, int(0.50 * med))
+    high_th = min(150, int(1.30 * med))
+    edges = cv2.Canny(blurred, low_th, high_th)
+
+    min_line_len = int(min(face_w, face_h) * 0.40)
     lines = cv2.HoughLinesP(
         edges, 1, np.pi / 180,
-        threshold=40,
+        threshold=35,
         minLineLength=min_line_len,
-        maxLineGap=12
+        maxLineGap=14
     )
 
     if lines is None:
-        return False, 0, 0, []
+        return False, 0.0, []
 
     top_h, bot_h, left_v, right_v = 0, 0, 0, 0
     for line in lines:
         lx1, ly1, lx2, ly2 = [int(v) for v in line.flatten()[:4]]
         dx = abs(lx2 - lx1)
         dy = abs(ly2 - ly1)
-        if dx > min_line_len and dy <= 0.20 * dx:
+        if dx > min_line_len and dy <= 0.22 * dx:
             mid_y = (ly1 + ly2) / 2.0
             mid_x = (lx1 + lx2) / 2.0
-            if (fx1 - 0.40 * face_w) <= mid_x <= (fx2 + 0.40 * face_w):
-                if (fy1 - 1.50 * face_h) <= mid_y <= (fy1 - 0.10 * face_h):
+            if (fx1 - 0.45 * face_w) <= mid_x <= (fx2 + 0.45 * face_w):
+                if (fy1 - 1.55 * face_h) <= mid_y <= (fy1 - 0.08 * face_h):
                     top_h += 1
-                elif (fy2 + 0.10 * face_h) <= mid_y <= (fy2 + 1.50 * face_h):
+                elif (fy2 + 0.08 * face_h) <= mid_y <= (fy2 + 1.55 * face_h):
                     bot_h += 1
-        elif dy > min_line_len and dx <= 0.20 * dy:
+        elif dy > min_line_len and dx <= 0.22 * dy:
             mid_y = (ly1 + ly2) / 2.0
             mid_x = (lx1 + lx2) / 2.0
-            if (fy1 - 0.50 * face_h) <= mid_y <= (fy2 + 0.50 * face_h):
-                if (fx1 - 0.90 * face_w) <= mid_x <= (fx1 - 0.05 * face_w):
+            if (fy1 - 0.55 * face_h) <= mid_y <= (fy2 + 0.55 * face_h):
+                if (fx1 - 0.95 * face_w) <= mid_x <= (fx1 - 0.05 * face_w):
                     left_v += 1
-                elif (fx2 + 0.05 * face_w) <= mid_x <= (fx2 + 0.90 * face_w):
+                elif (fx2 + 0.05 * face_w) <= mid_x <= (fx2 + 0.95 * face_w):
                     right_v += 1
 
     tot_h = top_h + bot_h
     tot_v = left_v + right_v
 
-    # True bezel enclosure must flank BOTH cheeks (left and right), plus at least one horizontal border
-    has_framing_lines = (left_v >= 1 and right_v >= 1) and (top_h >= 1 or bot_h >= 1)
-    details = []
-    if has_framing_lines:
-        details.append(f"Symmetric screen bezels (L:{left_v}, R:{right_v}, H:{tot_h})")
+    has_flanking = (left_v >= 1 and right_v >= 1)
+    has_corner = (left_v >= 1 or right_v >= 1) and (top_h >= 1 or bot_h >= 1)
+    has_h_enclosure = (top_h >= 1 and bot_h >= 1)
+    has_single_v = (left_v >= 1 or right_v >= 1)
 
-    return has_framing_lines, tot_h, tot_v, details
+    bezel_score = 0.0
+    details = []
+    if has_flanking and (top_h >= 1 or bot_h >= 1):
+        bezel_score = 0.45
+        details.append(f"Full screen chassis bezel enclosure (L:{left_v}, R:{right_v}, H:{tot_h})")
+    elif has_flanking:
+        bezel_score = 0.35
+        details.append(f"Symmetric vertical screen bezels (L:{left_v}, R:{right_v})")
+    elif has_corner:
+        bezel_score = 0.30
+        details.append(f"Screen chassis corner bezel (V:{tot_v}, H:{tot_h})")
+    elif has_h_enclosure:
+        bezel_score = 0.25
+        details.append(f"Horizontal display screen borders (Top:{top_h}, Bot:{bot_h})")
+    elif has_single_v:
+        bezel_score = 0.15
+        details.append(f"Prominent screen vertical bezel line (V:{tot_v})")
+
+    return (bezel_score > 0), bezel_score, details
 
 
 def detect_screen_or_spoof(
@@ -252,11 +287,11 @@ def detect_screen_or_spoof(
             spoof_score += 0.45
             spoof_signals.extend(rect_details)
 
-        has_bezel, _, _, bezel_details = detect_bezel_lines(
+        has_bezel, b_score, bezel_details = detect_bezel_lines(
             surround, face_box_in_surround, bw, bh
         )
         if has_bezel:
-            spoof_score += 0.40
+            spoof_score += b_score
             spoof_signals.extend(bezel_details)
 
     # 3. Moiré / High Frequency Subpixel Display Grid (2D FFT Power Spectrum)
@@ -278,32 +313,48 @@ def detect_screen_or_spoof(
         lf_val = np.mean(power[lf_band]) + 1e-6
         psd_ratio = hf_val / lf_val
 
-        if psd_ratio > 2.0:
-            spoof_score += 0.30
+        if psd_ratio > 1.65:
+            spoof_score += 0.25
             spoof_signals.append(f"Display subpixel moiré pattern (ratio: {psd_ratio:.1f})")
 
-    # 4. Glass Glare / Specular Reflections from Screen / Glossy Photo
+    # 4. Glass Glare & Specular Reflections (Sensitive across all brightness levels)
     hsv = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2HSV)
     v_channel = hsv[:, :, 2]
     s_channel = hsv[:, :, 1]
-    glare_mask = (v_channel >= 250) & (s_channel < 25)
-    glare_ratio = float(np.mean(glare_mask))
 
-    if glare_ratio > 0.035:
-        spoof_score += 0.30
-        spoof_signals.append(f"Screen / photo specular glare ({glare_ratio * 100:.1f}%)")
+    # High-intensity reflection (high brightness screens or direct light glare)
+    glare_mask_high = (v_channel >= 248) & (s_channel < 28)
+    glare_ratio_high = float(np.mean(glare_mask_high))
+
+    # Moderate specular sheen (normal / low brightness phone screens)
+    glare_mask_mod = (v_channel >= 228) & (s_channel < 35)
+    glare_ratio_mod = float(np.mean(glare_mask_mod))
+
+    if glare_ratio_high > 0.025:
+        spoof_score += 0.35
+        spoof_signals.append(f"Screen specular glare ({glare_ratio_high * 100:.1f}%)")
+    elif glare_ratio_mod > 0.045:
+        spoof_score += 0.20
+        spoof_signals.append(f"Glass screen reflection hotspot ({glare_ratio_mod * 100:.1f}%)")
 
     # 5. Color Gamut Flatness & Dynamic Range
     ycrcb = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2YCrCb)
     cr_std = np.std(ycrcb[:, :, 1])
     cb_std = np.std(ycrcb[:, :, 2])
 
-    if cr_std < 2.0 and cb_std < 2.0:
-        spoof_score += 0.20
-        spoof_signals.append(f"Flat 2D color / compressed chrominance (cr_std: {cr_std:.1f})")
+    if cr_std < 2.5 and cb_std < 2.5:
+        spoof_score += 0.15
+        spoof_signals.append(f"Compressed 2D chrominance (cr_std: {cr_std:.1f})")
 
-    # Rejection requires at least 1 strong structural signal or multiple correlated signals (score >= 0.45)
-    is_live = spoof_score < 0.45
+    # 6. Low Texture Roughness / Over-smoothed Display Surface
+    if gray_crop.shape[0] >= 32 and gray_crop.shape[1] >= 32:
+        laplacian_var = float(cv2.Laplacian(gray_crop, cv2.CV_64F).var())
+        if laplacian_var < 30.0:
+            spoof_score += 0.15
+            spoof_signals.append("Low texture roughness / over-smoothed display")
+
+    # Rejection requires spoof_score >= 0.40
+    is_live = spoof_score < 0.40
     reason = "; ".join(spoof_signals) if spoof_signals else "Live physical human face"
 
     return is_live, round(spoof_score, 3), reason

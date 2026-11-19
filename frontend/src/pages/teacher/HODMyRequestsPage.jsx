@@ -30,19 +30,19 @@ const HODMyRequestsPage = () => {
 
   const getStatusBadge = (status) => {
     if (status === 'PENDING') return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-100 text-black border border-neutral-300">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700">
         <Clock className="w-3.5 h-3.5 mr-1 text-black" />
         Pending Admin Approval
       </span>
     );
     if (status === 'APPROVED') return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-black text-white border border-black">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-teal-600 text-white border border-teal-600">
         <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-white" />
         Approved and Applied
       </span>
     );
     if (status === 'REJECTED') return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-200 text-neutral-800 border border-neutral-300">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-neutral-200 text-neutral-800 border border-slate-300 dark:border-slate-700">
         <XCircle className="w-3.5 h-3.5 mr-1 text-neutral-700" />
         Rejected
       </span>
@@ -75,17 +75,17 @@ const HODMyRequestsPage = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <div className="inline-flex items-center text-xs font-bold text-black bg-neutral-100 px-2.5 py-1 rounded-full border border-neutral-300 mb-2">
+          <div className="inline-flex items-center text-xs font-bold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-700 mb-2">
             <ShieldAlert className="w-3.5 h-3.5 mr-1 text-black" /> HOD Approval Requests
           </div>
-          <h1 className="text-2xl font-bold text-black font-heading">My Administrative Requests</h1>
-          <p className="text-neutral-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white font-heading">My Administrative Requests</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
             Track the status of requests you submitted for institutional Admin approval.
           </p>
         </div>
         <button
           onClick={loadRequests}
-          className="inline-flex items-center px-3 py-2 text-xs font-semibold text-neutral-700 hover:text-black bg-white border border-neutral-300 rounded-xl hover:bg-neutral-100 transition-colors shadow-sm"
+          className="inline-flex items-center px-3 py-2 text-xs font-semibold text-neutral-700 hover:text-black bg-white border border-slate-300 dark:border-slate-700 rounded-xl hover:bg-neutral-100 transition-colors shadow-sm"
         >
           <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
           Refresh
@@ -93,21 +93,21 @@ const HODMyRequestsPage = () => {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-neutral-100 border border-neutral-300 rounded-2xl p-4 text-center">
+        <div className="bg-neutral-100 border border-slate-300 dark:border-slate-700 rounded-2xl p-4 text-center">
           <div className="text-2xl font-extrabold text-black font-heading">{pendingCount}</div>
           <div className="text-xs font-semibold text-neutral-600 mt-1">Awaiting Admin Review</div>
         </div>
-        <div className="bg-neutral-100 border border-neutral-300 rounded-2xl p-4 text-center">
+        <div className="bg-neutral-100 border border-slate-300 dark:border-slate-700 rounded-2xl p-4 text-center">
           <div className="text-2xl font-extrabold text-black font-heading">{approvedCount}</div>
           <div className="text-xs font-semibold text-neutral-600 mt-1">Approved and Applied</div>
         </div>
-        <div className="bg-neutral-100 border border-neutral-300 rounded-2xl p-4 text-center">
+        <div className="bg-neutral-100 border border-slate-300 dark:border-slate-700 rounded-2xl p-4 text-center">
           <div className="text-2xl font-extrabold text-black font-heading">{rejectedCount}</div>
           <div className="text-xs font-semibold text-neutral-600 mt-1">Rejected by Admin</div>
         </div>
       </div>
 
-      <div className="p-4 bg-neutral-100 border border-neutral-300 rounded-2xl flex items-start space-x-3">
+      <div className="p-4 bg-neutral-100 border border-slate-300 dark:border-slate-700 rounded-2xl flex items-start space-x-3">
         <AlertCircle className="w-5 h-5 text-black flex-shrink-0 mt-0.5" />
         <div className="text-sm text-neutral-800">
           <span className="font-bold">How HOD Approval Works: </span>
@@ -131,12 +131,12 @@ const HODMyRequestsPage = () => {
 
       <div className="space-y-3">
         {loading ? (
-          <div className="p-10 text-center text-neutral-500 bg-white rounded-2xl border border-neutral-200">
+          <div className="p-10 text-center text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             <RefreshCw className="w-6 h-6 mx-auto mb-2 text-black animate-spin" />
             Loading your requests...
           </div>
         ) : requests.length === 0 ? (
-          <div className="p-12 text-center bg-white rounded-2xl border border-neutral-200">
+          <div className="p-12 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
             <FileText className="w-10 h-10 text-neutral-400 mx-auto mb-3" />
             <div className="font-bold text-black">No requests found</div>
             <p className="text-xs text-neutral-500 mt-1">
@@ -147,7 +147,7 @@ const HODMyRequestsPage = () => {
           requests.map((r) => (
             <div
               key={r.id}
-              className="bg-white rounded-2xl border border-neutral-200 shadow-sm transition-all"
+              className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all"
             >
               <div className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex-1 min-w-0">
@@ -156,7 +156,7 @@ const HODMyRequestsPage = () => {
                     {getRequestTypeLabel(r.request_type)} &bull; Submitted {new Date(r.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
                   </div>
                   {r.admin_remarks && (
-                    <div className="mt-2 text-xs p-2.5 rounded-xl border border-neutral-300 font-medium flex items-start space-x-2 bg-neutral-100 text-black">
+                    <div className="mt-2 text-xs p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-medium flex items-start space-x-2 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200">
                       <span className="font-bold shrink-0">Admin Feedback:</span>
                       <span>{r.admin_remarks}</span>
                     </div>
