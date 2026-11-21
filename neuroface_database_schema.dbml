@@ -1,0 +1,410 @@
+// =========================================================================
+// NEUROFACE: COMPLETE DATABASE SCHEMA (DBML FOR DBDATAGRAM.IO)
+// Project: NeuroFace - AI Biometric Attendance & Academic Governance
+// Database: SQLite (Edge) / PostgreSQL (Campus Cloud)
+// ORM: SQLAlchemy 2.0
+// =========================================================================
+
+Project NeuroFace {
+  database_type: 'PostgreSQL'
+  Note: '''
+    # NeuroFace Database Architecture
+    End-to-End Edge Vision, Multi-Signal Anti-Spoofing,
+    and Automated Attendance Infrastructure.
+  '''
+}
+
+// =========================================================================
+// ENUMS
+// =========================================================================
+
+Enum UserRole {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+Enum TeacherDesignation {
+  ASSISTANT_PROFESSOR
+  ASSOCIATE_PROFESSOR
+  PROFESSOR
+  HOD
+}
+
+Enum AttendanceSessionStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
+Enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+}
+
+Enum VerificationMethod {
+  FACE_RECOGNITION
+  MANUAL_OVERRIDE
+  MEDICAL_WAIVER
+}
+
+Enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+Enum FinePaymentStatus {
+  UNPAID
+  PAID
+  WAIVED
+}
+
+Enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// =========================================================================
+// 1. IDENTITY & USER PROFILES
+// =========================================================================
+
+Table users {
+  id int [pk, increment]
+  username varchar(50) [unique, not null]
+  email varchar(100) [unique, not null]
+  password_hash varchar(255) [not null]
+  role UserRole [not null, default: 'STUDENT']
+  is_active boolean [not null, default: true]
+  created_at timestamp [not null]
+
+  Note: 'Authentication and core user identities'
+}
+
+Table teachers {
+  id int [pk, increment]
+  user_id int [unique, not null]
+  teacher_code varchar(20) [unique, not null]
+  full_name varchar(100) [not null]
+  department_id int [null]
+  designation TeacherDesignation [not null, default: 'ASSISTANT_PROFESSOR']
+  phone varchar(20) [null]
+
+  Note: 'Faculty profiles including HODs and Class Advisors'
+}
+
+Table students {
+  id int [pk, increment]
+  user_id int [unique, not null]
+  register_number varchar(30) [unique, not null]
+  full_name varchar(100) [not null]
+  department_id int [null]
+  class_id int [null]
+  face_registered boolean [not null, default: false]
+  phone varchar(20) [null]
+
+  Note: 'Enrolled student demographic and academic profiles'
+}
+
+Table face_embeddings {
+  id int [pk, increment]
+  student_id int [not null]
+  embedding_vector text [not null, note: 'JSON array of 512 normalized floats (ArcFace)']
+  quality_score float [not null, default: 1.0]
+  model_name varchar(50) [not null, default: 'ArcFace-512-ONNX']
+  created_at timestamp [not null]
+
+  Note: 'Biometric face templates; NO raw images stored'
+}
+
+// =========================================================================
+// 2. ACADEMIC STRUCTURE & TIMETABLE
+// =========================================================================
+
+Table departments {
+  id int [pk, increment]
+  code varchar(20) [unique, not null, note: 'e.g. MCA, CSE, ECE']
+  name varchar(100) [not null]
+
+  Note: 'Academic departments'
+}
+
+Table classes {
+  id int [pk, increment]
+  name varchar(50) [not null, note: 'e.g. MCA S3 Batch A']
+  department_id int [not null]
+  semester int [not null]
+  academic_year varchar(20) [not null, note: 'e.g. 2025-2026']
+  class_advisor_id int [null]
+
+  indexes {
+    (name, department_id, academic_year) [unique]
+  }
+}
+
+Table subjects {
+  id int [pk, increment]
+  code varchar(20) [unique, not null, note: 'e.g. MCA301']
+  name varchar(100) [not null]
+  department_id int [not null]
+  semester int [not null]
+  total_credits int [not null, default: 4]
+}
+
+Table teacher_subject_class_assignments {
+  id int [pk, increment]
+  teacher_id int [not null]
+  subject_id int [not null]
+  class_id int [not null]
+
+  indexes {
+    (teacher_id, subject_id, class_id) [unique]
+  }
+  Note: 'Links teacher, subject, and student cohort'
+}
+
+Table attendance_slots {
+  id int [pk, increment]
+  name varchar(50) [not null, note: 'e.g. Slot 1 (09:00 - 10:00)']
+  start_time time [not null]
+  end_time time [not null]
+  day_of_week varchar(15) [null, note: 'Monday, Tuesday or NULL daily']
+}
+
+// =========================================================================
+// 3. ATTENDANCE SESSIONS & RECORDS
+// =========================================================================
+
+Table attendance_sessions {
+  id int [pk, increment]
+  assignment_id int [not null]
+  teacher_id int [not null]
+  slot_id int [null]
+  session_date date [not null]
+  start_time timestamp [not null]
+  end_time timestamp [not null]
+  status AttendanceSessionStatus [not null, default: 'ACTIVE']
+  created_at timestamp [not null]
+
+  Note: 'Live attendance sessions started by faculty'
+}
+
+Table attendance_records {
+  id int [pk, increment]
+  session_id int [not null]
+  student_id int [not null]
+  status AttendanceStatus [not null, default: 'PRESENT']
+  timestamp timestamp [not null]
+  confidence_score float [null, note: 'Cosine similarity score (0.0 to 1.0)']
+  verification_method VerificationMethod [not null, default: 'FACE_RECOGNITION']
+  marked_by varchar(100) [null, note: 'System AI or Teacher name']
+
+  indexes {
+    (session_id, student_id) [unique]
+  }
+  Note: 'Individual student attendance ledger'
+}
+
+// =========================================================================
+// 4. LEAVE, OCR & MEDICAL WAIVERS
+// =========================================================================
+
+Table leave_applications {
+  id int [pk, increment]
+  student_id int [not null]
+  subject_id int [null, note: 'Null applies to all subjects']
+  day_type varchar(20) [not null, default: 'FULL_DAY']
+  start_date date [not null]
+  end_date date [not null]
+  reason text [not null]
+  status LeaveStatus [not null, default: 'PENDING']
+  reviewed_by int [null]
+  review_date timestamp [null]
+  review_remarks text [null]
+  created_at timestamp [not null]
+}
+
+Table leave_documents {
+  id int [pk, increment]
+  leave_id int [null]
+  file_path varchar(255) [not null]
+  file_name varchar(100) [not null]
+  mime_type varchar(50) [not null]
+  ocr_processed boolean [not null, default: false]
+  uploaded_at timestamp [not null]
+}
+
+Table ocr_results {
+  id int [pk, increment]
+  document_id int [unique, not null]
+  raw_text text [not null]
+  detected_student_info varchar(100) [null]
+  detected_dates varchar(100) [null]
+  detected_reason text [null]
+  detected_day_type varchar(20) [null]
+  detected_subject varchar(100) [null]
+  confidence float [not null, default: 0.0]
+  created_at timestamp [not null]
+
+  Note: 'Tesseract OCR parsed attributes from medical slip'
+}
+
+Table medical_waivers {
+  id int [pk, increment]
+  student_id int [not null]
+  subject_id int [not null]
+  leave_id int [null]
+  waived_classes_count int [not null, default: 0]
+  applied_rule varchar(100) [not null, default: 'HOD_MEDICAL_WAIVER_ADD_PRESENT']
+  approved_by int [not null]
+  approval_date timestamp [not null]
+  remarks text [null]
+
+  Note: 'Official attendance credit granted by HOD'
+}
+
+// =========================================================================
+// 5. GOVERNANCE, AUDIT & FINES
+// =========================================================================
+
+Table fine_rules {
+  id int [pk, increment]
+  min_eligible_pct float [not null, default: 85.0]
+  condonation_min_pct float [not null, default: 75.0]
+  fine_amount float [not null, default: 500.0]
+  is_active boolean [not null, default: true]
+  updated_at timestamp
+}
+
+Table fine_records {
+  id int [pk, increment]
+  student_id int [not null]
+  subject_id int [not null]
+  fine_amount float [not null]
+  status FinePaymentStatus [not null, default: 'UNPAID']
+  calculated_at timestamp [not null]
+}
+
+Table hod_approval_requests {
+  id int [pk, increment]
+  request_type varchar(50) [not null]
+  status ApprovalStatus [not null, default: 'PENDING']
+  requested_by_id int [not null]
+  title varchar(200) [not null]
+  payload_json text [not null]
+  reviewed_by_id int [null]
+  reviewed_at timestamp [null]
+  admin_remarks text [null]
+  created_at timestamp [not null]
+}
+
+Table face_re_registration_requests {
+  id int [pk, increment]
+  student_id int [not null]
+  status ApprovalStatus [not null, default: 'PENDING']
+  reason text [null]
+  reviewed_by_id int [null]
+  reviewed_at timestamp [null]
+  admin_remarks text [null]
+}
+
+Table audit_logs {
+  id int [pk, increment]
+  user_id int [null]
+  action varchar(100) [not null]
+  entity_type varchar(50) [not null]
+  entity_id int [null]
+  details text [null]
+  ip_address varchar(45) [null]
+  timestamp timestamp [not null]
+
+  Note: 'Tamper-evident system activity ledger'
+}
+
+// =========================================================================
+// RELATIONSHIPS & FOREIGN KEYS
+// =========================================================================
+
+// Users & Profiles
+Ref: teachers.user_id - users.id [delete: cascade]
+Ref: students.user_id - users.id [delete: cascade]
+Ref: teachers.department_id > departments.id [delete: set null]
+Ref: students.department_id > departments.id [delete: set null]
+Ref: students.class_id > classes.id [delete: set null]
+Ref: face_embeddings.student_id > students.id [delete: cascade]
+
+// Academic Structure
+Ref: classes.department_id > departments.id [delete: cascade]
+Ref: classes.class_advisor_id > teachers.id [delete: set null]
+Ref: subjects.department_id > departments.id [delete: cascade]
+Ref: teacher_subject_class_assignments.teacher_id > teachers.id [delete: cascade]
+Ref: teacher_subject_class_assignments.subject_id > subjects.id [delete: cascade]
+Ref: teacher_subject_class_assignments.class_id > classes.id [delete: cascade]
+
+// Attendance Core
+Ref: attendance_sessions.assignment_id > teacher_subject_class_assignments.id [delete: cascade]
+Ref: attendance_sessions.teacher_id > teachers.id [delete: cascade]
+Ref: attendance_sessions.slot_id > attendance_slots.id [delete: set null]
+Ref: attendance_records.session_id > attendance_sessions.id [delete: cascade]
+Ref: attendance_records.student_id > students.id [delete: cascade]
+
+// Leaves & OCR Waivers
+Ref: leave_applications.student_id > students.id [delete: cascade]
+Ref: leave_applications.subject_id > subjects.id [delete: set null]
+Ref: leave_applications.reviewed_by > users.id [delete: set null]
+Ref: leave_documents.leave_id > leave_applications.id [delete: cascade]
+Ref: ocr_results.document_id - leave_documents.id [delete: cascade]
+Ref: medical_waivers.student_id > students.id [delete: cascade]
+Ref: medical_waivers.subject_id > subjects.id [delete: cascade]
+Ref: medical_waivers.leave_id > leave_applications.id [delete: set null]
+Ref: medical_waivers.approved_by > users.id [delete: set null]
+
+// Fines, Requests & Auditing
+Ref: fine_records.student_id > students.id [delete: cascade]
+Ref: fine_records.subject_id > subjects.id [delete: cascade]
+Ref: hod_approval_requests.requested_by_id > users.id [delete: cascade]
+Ref: hod_approval_requests.reviewed_by_id > users.id [delete: set null]
+Ref: face_re_registration_requests.student_id > students.id [delete: cascade]
+Ref: face_re_registration_requests.reviewed_by_id > users.id [delete: set null]
+Ref: audit_logs.user_id > users.id [delete: set null]
+
+// =========================================================================
+// TABLE GROUPS (Color-Coded Canvas Modules in dbdiagram.io)
+// =========================================================================
+
+TableGroup User_Identity {
+  users
+  teachers
+  students
+  face_embeddings
+}
+
+TableGroup Academic_Hierarchy {
+  departments
+  classes
+  subjects
+  teacher_subject_class_assignments
+  attendance_slots
+}
+
+TableGroup Attendance_Pipeline {
+  attendance_sessions
+  attendance_records
+}
+
+TableGroup Leave_OCR_Waiver {
+  leave_applications
+  leave_documents
+  ocr_results
+  medical_waivers
+}
+
+TableGroup Governance_Audit {
+  fine_rules
+  fine_records
+  hod_approval_requests
+  face_re_registration_requests
+  audit_logs
+}
