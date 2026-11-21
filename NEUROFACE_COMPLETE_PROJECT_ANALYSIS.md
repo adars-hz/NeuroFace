@@ -124,7 +124,7 @@ All client-side code lives in `d:\Neuroface\frontend\src`:
 | **Admin** | `AssignmentsPage.jsx` | Map faculty to subject and class | `GET/POST/DELETE /admin/assignments` |
 | **Admin** | `ApprovalsPage.jsx` | Review HOD data requests & student face re-registrations | `GET/POST /admin/approvals`, `/admin/face-re-registrations` |
 | **Admin** | `DatabaseExplorerPage.jsx` | Direct browser view of 14 database tables and live rows | `GET /admin/db-explorer/tables`, `/table/{name}` |
-| **Admin** | `AuditLogsPage.jsx` | System activity audit trails with JSON metadata viewer | `GET /admin/audit-logs` |
+| **Admin** | `AuditLogsPage.jsx` | *(Removed from Admin navigation & redirected to `/admin` to streamline interface)* | `GET /admin/audit-logs` *(internal)* |
 | **Teacher** | `TeacherDashboard.jsx` | Overview of assigned subjects, recent sessions, pending leaves | `GET /teacher/my-assignments`, `/teacher/my-sessions`, `/leaves/pending-count` |
 | **Teacher** | `StartSessionPage.jsx` | Select assignment, pick slot, smart baseline roster sorting | `GET /teacher/my-assignments`, `POST /attendance/sessions/start`, `POST /attendance/consecutive-periods` |
 | **Teacher** | `LiveAttendancePage.jsx` | WebRTC scanner, 1.2s AI loop, bounding boxes, audio chime | `GET /attendance/sessions/{id}/live-stats`, `POST /process-frame`, `POST /complete` |
@@ -640,7 +640,7 @@ In `backend/app/main.py`, CORS middleware is configured using `settings.CORS_ORI
 | **Medical Waiver Engine** | **Complete** | `app/services/attendance_calculator.py`<br>`app/api/v1/teacher.py` | HOD grants waiver credits; formula adds credits into effective attendance percentage. | None. Fully verified by test suite. |
 | **Report Generation (PDF/CSV)**| **Complete** | `app/services/report_service.py`<br>`app/api/v1/reports.py` | Native CSV export and ReportLab styled PDF generation. | None. Verified by unit tests. |
 | **Fine Rules & Condonation** | **Partial / Disabled** | `app/services/attendance_calculator.py`<br>`app/models/leave.py`<br>`FineRulesPage.jsx` | Models and admin CRUD exist, but fee calculation is neutralized (`fine_amt = 0.0`) and page route is redirected. | Condonation fee calculation disabled in code. |
-| **Audit Logging System** | **Complete** | `app/models/audit.py`<br>`app/core/audit.py`<br>`AuditLogsPage.jsx` | Persists user ID, action, entity, JSON metadata, and client IP address. | None. Fully functional. |
+| **Audit Logging System** | **Complete (Internal)** | `app/models/audit.py`<br>`app/core/audit.py` | Internal backend event logging preserved for data integrity; Admin UI viewer removed to streamline interface. | None. Operates in background. |
 | **Database Explorer** | **Complete** | `app/api/v1/admin.py`<br>`DatabaseExplorerPage.jsx` | Admin can introspect and view raw records of all 14 database tables in the browser. | None. Excellent debugging/audit tool. |
 
 ---
