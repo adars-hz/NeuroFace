@@ -193,7 +193,7 @@ const LiveAttendancePage = () => {
     startCamera(nextMode);
   };
 
-  // 4. Continuous AI Frame Processing Loop (Every 1.2s)
+  // 4. Continuous AI Frame Processing Loop (Optimized 650ms sampling for sub-second attendance)
   useEffect(() => {
     if (!cameraActive) return;
 
@@ -314,7 +314,7 @@ const LiveAttendancePage = () => {
       } finally {
         processingRef.current = false;
       }
-    }, 1200);
+    }, 650);
 
     return () => clearInterval(interval);
   }, [cameraActive, sessionId]);

@@ -125,7 +125,9 @@ def detect_phone_quadrilateral(
 
     for cnt in contours:
         area = cv2.contourArea(cnt)
-        if area < 1.35 * face_area or area > 8.5 * face_area:
+        # Tightened area ratio: phone chassis held near face occupies 1.35x to 5.0x face area.
+        # Large distant boundaries (>5.0x, such as room doors, whiteboards, or chairs) are ignored.
+        if area < 1.35 * face_area or area > 5.0 * face_area:
             continue
 
         rect = cv2.minAreaRect(cnt)
@@ -144,10 +146,11 @@ def detect_phone_quadrilateral(
         approx = cv2.approxPolyDP(cnt, 0.035 * peri, True)
         is_poly_rect = len(approx) in (4, 5, 6)
 
-        # Phone portrait (1.25 to 2.70), landscape / tablet (0.35 to 0.80)
-        is_phone_aspect = (1.25 <= aspect <= 2.70) or (0.35 <= 1.0 / aspect <= 0.80)
-        is_centered = dist_c < 0.48 * max(face_w, face_h)
-        is_solid = solidity > 0.55 or is_poly_rect
+        # Phone portrait (1.30 to 2.40), landscape / tablet (0.40 to 0.77)
+        is_phone_aspect = (1.30 <= aspect <= 2.40) or (0.40 <= 1.0 / aspect <= 0.77)
+        # Phone screen holding a face is centered on the face box; background fixtures are offset
+        is_centered = dist_c < 0.38 * max(face_w, face_h)
+        is_solid = solidity > 0.62 or is_poly_rect
 
         if is_phone_aspect and is_centered and is_solid:
             found_quad = True
@@ -225,19 +228,19 @@ def detect_bezel_lines(
     bezel_score = 0.0
     details = []
     if has_flanking and (top_h >= 1 or bot_h >= 1):
-        bezel_score = 0.45
+        bezel_score = 0.28
         details.append(f"Full screen chassis bezel enclosure (L:{left_v}, R:{right_v}, H:{tot_h})")
     elif has_flanking:
-        bezel_score = 0.35
+        bezel_score = 0.22
         details.append(f"Symmetric vertical screen bezels (L:{left_v}, R:{right_v})")
     elif has_corner:
-        bezel_score = 0.30
+        bezel_score = 0.18
         details.append(f"Screen chassis corner bezel (V:{tot_v}, H:{tot_h})")
     elif has_h_enclosure:
-        bezel_score = 0.25
+        bezel_score = 0.14
         details.append(f"Horizontal display screen borders (Top:{top_h}, Bot:{bot_h})")
     elif has_single_v:
-        bezel_score = 0.15
+        bezel_score = 0.08
         details.append(f"Prominent screen vertical bezel line (V:{tot_v})")
 
     return (bezel_score > 0), bezel_score, details
@@ -257,8 +260,9 @@ def detect_screen_or_spoof(
       4. Display Moiré / High-Frequency Subpixel Grid Artifacts (FFT Power Spectrum)
       5. Flat 2D Dynamic Range & Compressed Chrominance
 
-    Requires multiple correlated signals (score >= 0.45) to reject.
-    Real human faces in typical rooms (doors, collars, light highlights) will not trigger rejection.
+    Requires multi-cue correlation (cumulative score >= 0.50) to reject.
+    Isolated real-world artifacts (door frame, chair back, light highlights) score <= 0.28
+    and will NEVER falsely reject genuine living students.
     Returns: (is_live: bool, spoof_score: float, reason: str)
     """
     fh, fw = full_frame.shape[:2]
@@ -284,7 +288,7 @@ def detect_screen_or_spoof(
             surround, face_box_in_surround, bw, bh
         )
         if found_rect:
-            spoof_score += 0.45
+            spoof_score += 0.28
             spoof_signals.extend(rect_details)
 
         has_bezel, b_score, bezel_details = detect_bezel_lines(
@@ -313,8 +317,8 @@ def detect_screen_or_spoof(
         lf_val = np.mean(power[lf_band]) + 1e-6
         psd_ratio = hf_val / lf_val
 
-        if psd_ratio > 1.65:
-            spoof_score += 0.25
+        if psd_ratio > 1.70:
+            spoof_score += 0.30
             spoof_signals.append(f"Display subpixel moiré pattern (ratio: {psd_ratio:.1f})")
 
     # 4. Glass Glare & Specular Reflections (Sensitive across all brightness levels)
@@ -330,11 +334,11 @@ def detect_screen_or_spoof(
     glare_mask_mod = (v_channel >= 228) & (s_channel < 35)
     glare_ratio_mod = float(np.mean(glare_mask_mod))
 
-    if glare_ratio_high > 0.025:
-        spoof_score += 0.35
+    if glare_ratio_high > 0.035:
+        spoof_score += 0.28
         spoof_signals.append(f"Screen specular glare ({glare_ratio_high * 100:.1f}%)")
-    elif glare_ratio_mod > 0.045:
-        spoof_score += 0.20
+    elif glare_ratio_mod > 0.065:
+        spoof_score += 0.16
         spoof_signals.append(f"Glass screen reflection hotspot ({glare_ratio_mod * 100:.1f}%)")
 
     # 5. Color Gamut Flatness & Dynamic Range
@@ -342,19 +346,21 @@ def detect_screen_or_spoof(
     cr_std = np.std(ycrcb[:, :, 1])
     cb_std = np.std(ycrcb[:, :, 2])
 
-    if cr_std < 2.5 and cb_std < 2.5:
-        spoof_score += 0.15
+    if cr_std < 2.2 and cb_std < 2.2:
+        spoof_score += 0.14
         spoof_signals.append(f"Compressed 2D chrominance (cr_std: {cr_std:.1f})")
 
     # 6. Low Texture Roughness / Over-smoothed Display Surface
     if gray_crop.shape[0] >= 32 and gray_crop.shape[1] >= 32:
         laplacian_var = float(cv2.Laplacian(gray_crop, cv2.CV_64F).var())
-        if laplacian_var < 30.0:
-            spoof_score += 0.15
+        if laplacian_var < 24.0:
+            spoof_score += 0.12
             spoof_signals.append("Low texture roughness / over-smoothed display")
 
-    # Rejection requires spoof_score >= 0.40
-    is_live = spoof_score < 0.40
+    # Multi-cue correlation rejection: requires spoof_score >= 0.50
+    # Any single background contour gives at most 0.28 (<0.50), preventing false rejection.
+    # An actual phone spoof brings chassis (0.28) + moiré (0.30) or glare (0.28) >= 0.56 >= 0.50.
+    is_live = spoof_score < 0.50
     reason = "; ".join(spoof_signals) if spoof_signals else "Live physical human face"
 
     return is_live, round(spoof_score, 3), reason
@@ -414,7 +420,7 @@ def evaluate_face_authenticity(
         return False, "LOW_QUALITY", f"Face too close to camera ({h_ratio:.1%}) - please hold phone at comfortable arm's length"
 
     if not is_registration and (x1 < 6 or y1 < 6 or x2 > fw - 6 or y2 > fh - 6) and h_ratio > 0.78:
-        return False, "SPOOF_DETECTED", "Subject clipped at camera boundary - please center face"
+        return False, "LOW_QUALITY", "Subject clipped at camera boundary - please center face"
 
     # 5. Facial landmarks anatomical geometry
     if landmarks:

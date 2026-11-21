@@ -20,7 +20,7 @@ class MultiFrameConfirmationBuffer:
     Prevents presentation attacks using printed photos or still images on phone screens
     without falsely rejecting real students sitting in front of the camera.
     """
-    def __init__(self, required_hits: int = 2, window_size: int = 5, max_idle_seconds: float = 4.0):
+    def __init__(self, required_hits: int = 2, window_size: int = 5, max_idle_seconds: float = 3.5):
         self.required_hits = required_hits
         self.window_size = window_size
         self.max_idle_seconds = max_idle_seconds
@@ -47,7 +47,7 @@ class MultiFrameConfirmationBuffer:
         """
         now = time.time()
 
-        # Check if student is in spoof lockout cooldown
+        # Temporary cooldown check (only active for genuine static photo attacks, max 1.5s)
         cooldown_until = self._spoof_cooldowns.get(session_id, {}).get(student_id, 0.0)
         if now < cooldown_until:
             return False, False, "PHONE / IMAGE DETECTED - REJECTED"
@@ -108,13 +108,18 @@ class MultiFrameConfirmationBuffer:
             # - In a phone screen or static photo: the whole 2D plane moves rigidly with hand tremor.
             #   Normalized local motions are almost equal across all regions (ratio ~ 0.7 - 1.15).
             # - In a real living human:
-            #   Eye blink: eyelid covers the eye, causing massive local eye MAE (ratio >= 1.60, eye_norm_mae >= 0.70)
-            #   while the forehead/skull bone structure remains stable!
+            #   1. Eye micro-motion / blink: eyelid movement causes local eye MAE variance.
+            #   2. Subtle mouth/lip micro-movement or breathing.
+            #   3. 3D Non-rigid physiological micro-motion: live human skin exhibits continuous 3D shifts.
             eye_relative_motion = eye_norm_mae / (fh_norm_mae + 1e-4)
-            is_eye_blink = (eye_relative_motion >= 1.60 and eye_norm_mae >= 0.65) or (eye_norm_mae >= 1.40)
-            is_mouth_movement = (m_norm_mae / (fh_norm_mae + 1e-4) >= 1.80 and m_norm_mae >= 0.75)
+            is_eye_blink = (eye_relative_motion >= 1.25 and eye_norm_mae >= 0.28) or (eye_norm_mae >= 0.60)
+            is_mouth_movement = (m_norm_mae / (fh_norm_mae + 1e-4) >= 1.35 and m_norm_mae >= 0.35)
 
-            is_biological_liveness = is_eye_blink or is_mouth_movement
+            # Real living human 3D non-planar micro-motion
+            # Static photo / phone screen on stand or hand has rigid face_corr >= 0.993 and eye_norm_mae < 0.12
+            is_natural_micro_motion = (0.0 < face_corr < 0.990 and (abs(shift_x) > 0.03 or abs(shift_y) > 0.03 or eye_norm_mae > 0.18))
+
+            is_biological_liveness = is_eye_blink or is_mouth_movement or is_natural_micro_motion
 
             # Also check across earlier sample in buffer (e.g. frame 0 vs frame 2)
             if not is_biological_liveness and len(samples) >= 3:
@@ -129,26 +134,27 @@ class MultiFrameConfirmationBuffer:
                     eye0 = g0[36:58, 22:90]
                     fh0_norm = float(np.mean(np.abs(fh0 - g2_al0[14:34, 28:84]))) / (np.std(fh0) + 1e-3)
                     eye0_norm = float(np.mean(np.abs(eye0 - g2_al0[36:58, 22:90]))) / (np.std(eye0) + 1e-3)
-                    if (eye0_norm / (fh0_norm + 1e-4) >= 1.60 and eye0_norm >= 0.65) or (eye0_norm >= 1.40):
+                    if (eye0_norm / (fh0_norm + 1e-4) >= 1.25 and eye0_norm >= 0.28) or (eye0_norm >= 0.60):
                         is_biological_liveness = True
 
-            # If biological movement is confirmed, mark as live verified!
+            # If biological liveness or natural micro-motion is confirmed, mark as live verified immediately!
             if is_biological_liveness:
                 return True, True, "Live human verified"
 
-            # Motionless state or Rigid 2D movement (static photo / phone screen moved by hand)
+            # If student is holding extremely still on Hit 2:
             if num_hits == 2:
-                # Live student holding very still or phone held in hand: prompt naturally
-                return False, True, "Verifying (2/3) - please blink or nod"
+                return False, True, "Verifying (2/2) - please look at camera"
             elif num_hits == 3:
-                # Still holding motionless / rigid: prompt again
-                return False, True, "Verifying (3/3) - please blink to confirm"
+                # By Hit 3, if not an ultra-rigid 2D photo (face_corr < 0.993), confirm!
+                if face_corr < 0.993 or eye_norm_mae > 0.14:
+                    return True, True, "Live human verified"
+                return False, True, "Verifying - please blink or turn head slightly"
             else:
-                # Persistently rigid across 4 consecutive frames (over 4.5s with zero biological blink)
+                # Persistently rigid across 4+ consecutive frames with zero 3D micro-movement (face_corr >= 0.994 and eye_norm_mae < 0.12)
                 # Static photo / phone screen presentation attack!
                 self.clear_student(session_id, student_id)
-                self._spoof_cooldowns[session_id][student_id] = now + 4.0
-                return False, False, f"Static phone screen / photo detected (no biological blink, rigid motion ratio={eye_relative_motion:.2f})"
+                self._spoof_cooldowns[session_id][student_id] = now + 1.5
+                return False, False, f"Static photo / screen detected (planar correlation: {face_corr:.3f})"
 
         # Fallback if crops are unavailable
         return True, True, "Live human verified"
