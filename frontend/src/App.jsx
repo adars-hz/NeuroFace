@@ -11,7 +11,6 @@ import AcademicSetupPage from './pages/admin/AcademicSetupPage';
 import TeachersPage from './pages/admin/TeachersPage';
 import StudentsPage from './pages/admin/StudentsPage';
 import AssignmentsPage from './pages/admin/AssignmentsPage';
-import AuditLogsPage from './pages/admin/AuditLogsPage';
 import DatabaseExplorerPage from './pages/admin/DatabaseExplorerPage';
 import ApprovalsPage from './pages/admin/ApprovalsPage';
 
@@ -63,7 +62,7 @@ function App() {
             <Route path="assignments" element={<AssignmentsPage />} />
             <Route path="fine-rules" element={<Navigate to="/admin" replace />} />
             <Route path="database" element={<DatabaseExplorerPage />} />
-            <Route path="audit-logs" element={<AuditLogsPage />} />
+            <Route path="audit-logs" element={<Navigate to="/admin" replace />} />
             <Route path="approvals" element={<ApprovalsPage />} />
           </Route>
 

@@ -244,7 +244,7 @@ const LoginPage = () => {
             </span>
             <span className="flex items-center">
               <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mr-1" />
-              Audit Log Tracing
+              Biometric Security
             </span>
             <span className="flex items-center">
               <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 mr-1" />

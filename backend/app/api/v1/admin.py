@@ -1400,6 +1400,8 @@ def get_audit_logs(limit: int = 100, db: Session = Depends(get_db), admin: User 
     return results
 
 # ----------------- DATABASE EXPLORER -----------------
+EXCLUDED_DB_EXPLORER_TABLES = {"audit_logs", "fine_records", "fine_rules"}
+
 @router.get("/db-explorer/tables")
 def get_all_database_tables(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
     """Retrieve metadata and row counts for all database tables."""
@@ -1407,6 +1409,8 @@ def get_all_database_tables(db: Session = Depends(get_db), admin: User = Depends
     inspector = inspect(db.bind)
     tables = []
     for table_name in inspector.get_table_names():
+        if table_name in EXCLUDED_DB_EXPLORER_TABLES:
+            continue
         try:
             from sqlalchemy import text
             count = db.execute(text(f"SELECT COUNT(*) FROM {table_name}")).scalar()
@@ -1426,9 +1430,11 @@ def get_table_data(
     admin: User = Depends(get_current_admin)
 ):
     """Retrieve column schema and up to 50 rows for any selected database table."""
+    if table_name in EXCLUDED_DB_EXPLORER_TABLES:
+        raise HTTPException(status_code=404, detail=f"Table '{table_name}' does not exist or is excluded.")
     from sqlalchemy import inspect, text
     inspector = inspect(db.bind)
-    valid_tables = inspector.get_table_names()
+    valid_tables = [t for t in inspector.get_table_names() if t not in EXCLUDED_DB_EXPLORER_TABLES]
     if table_name not in valid_tables:
         raise HTTPException(status_code=404, detail=f"Table '{table_name}' does not exist.")
 

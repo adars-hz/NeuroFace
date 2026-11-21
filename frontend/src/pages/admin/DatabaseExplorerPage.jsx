@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { Database, Table, RefreshCw, Search, Eye, Layers, ShieldCheck } from 'lucide-react';
 
+const EXCLUDED_TABLES = ['audit_logs', 'fine_records', 'fine_rules'];
+
 const DatabaseExplorerPage = () => {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState('students');
@@ -14,9 +16,10 @@ const DatabaseExplorerPage = () => {
     setLoadingTables(true);
     try {
       const res = await api.get('/admin/db-explorer/tables');
-      setTables(res.data);
-      if (res.data.length > 0 && !selectedTable) {
-        setSelectedTable(res.data[0].table_name);
+      const filtered = (res.data || []).filter((t) => !EXCLUDED_TABLES.includes(t.table_name));
+      setTables(filtered);
+      if (filtered.length > 0 && (!selectedTable || EXCLUDED_TABLES.includes(selectedTable))) {
+        setSelectedTable(filtered[0].table_name);
       }
     } catch (err) {
       console.error(err);

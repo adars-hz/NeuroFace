@@ -137,10 +137,6 @@ const Sidebar = ({ isOpen, onClose }) => {
                   <Database className="w-4 h-4" />
                   <span>Database Explorer</span>
                 </NavLink>
-                <NavLink to="/admin/audit-logs" className={linkClass} onClick={handleLinkClick}>
-                  <Activity className="w-4 h-4" />
-                  <span>Audit Logs</span>
-                </NavLink>
                 <NavLink to="/admin/approvals" className={linkClass} onClick={handleLinkClick}>
                   <ShieldAlert className="w-4 h-4" />
                   <span className="flex-1">Approvals Queue</span>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { Users, GraduationCap, BookOpen, Clock, Camera, ShieldCheck, Activity, CheckCircle2 } from 'lucide-react';
+import { Users, GraduationCap, BookOpen, Clock, Camera, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const AdminDashboard = () => {
@@ -134,18 +134,18 @@ const AdminDashboard = () => {
 
         <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
           <div className="font-bold text-slate-900 dark:text-white font-heading flex items-center space-x-2">
-            <Activity className="w-5 h-5 text-purple-600" />
-            <span>System Audit & Activity Logs</span>
+            <GraduationCap className="w-5 h-5 text-indigo-600" />
+            <span>Student Management & Biometrics</span>
           </div>
-          <p className="text-xs text-slate-600">
-            Inspect real-time system audit trails, authentication logs, and biometric session histories.
+          <p className="text-xs text-slate-600 dark:text-slate-400">
+            View student directories, manage academic batches, and review biometric enrollment statuses.
           </p>
           <div className="pt-2">
             <Link
-              to="/admin/audit-logs"
-              className="inline-flex items-center text-xs font-bold text-purple-600 hover:text-purple-700"
+              to="/admin/students"
+              className="inline-flex items-center text-xs font-bold text-indigo-600 hover:text-indigo-700"
             >
-              View Audit Logs &rarr;
+              Manage Students &rarr;
             </Link>
           </div>
         </div>
